@@ -1,0 +1,411 @@
+{
+  "info": {
+    "_postman_id": "b3a6f1b0-8d1e-4b1a-9c2e-kuvaka-backend",
+    "name": "Kuvaka Clinical Notetaker - Backend API",
+    "description": "Backend API collection for Kuvaka Clinical Notetaker (FastAPI). Base URL default: http://localhost:8001, API prefix /api/v1.\n\nAuth flow: call Register or Login first — the response's `access_token` is auto-saved to the collection variable `access_token` via a test script, and all protected requests use it as a Bearer token automatically.\n\nRefresh/Logout rely on the httpOnly `refresh_token` cookie — enable Postman's cookie jar (Interceptor / native cookie support) for those to work.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8001", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "patient_id", "value": "", "type": "string" },
+    { "key": "session_id", "value": "", "type": "string" },
+    { "key": "question_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dr. Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "register"] },
+            "description": "Body: name (required), email (required, valid email), password (required, min 8 chars).\nResponse 201: access_token, token_type, expires_in, user{id,email,name}. Also sets httpOnly refresh_token cookie. Rate limited 10/min."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "login"] },
+            "description": "Body: email (required), password (required).\nResponse 200: access_token, token_type, expires_in, user{id,email,name}. Sets httpOnly refresh_token cookie. Rate limited 10/min. 401 on bad credentials."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', data.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/auth/refresh", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "refresh"] },
+            "description": "No body. Requires the httpOnly refresh_token cookie set by login/register (needs Postman cookie jar enabled). Rotates the cookie and returns a new access_token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] },
+            "description": "No body. Revokes and clears the refresh_token cookie if present. Returns {\"ok\": true}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
+        {
+          "name": "Create Patient",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.patient_id) { pm.collectionVariables.set('patient_id', data.patient_id); }",
+                  "    else if (data.id) { pm.collectionVariables.set('patient_id', data.id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"age\": 34,\n  \"gender\": \"male\",\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/patients", "host": ["{{base_url}}"], "path": ["api", "v1", "patients"] },
+            "description": "Body: name (required), age (required), gender (optional), phone (optional). Requires Bearer auth. Response 201: created patient object scoped to the authenticated doctor."
+          }
+        },
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/patients", "host": ["{{base_url}}"], "path": ["api", "v1", "patients"] },
+            "description": "Returns {\"patients\": [...]} for the authenticated doctor. Requires Bearer auth."
+          }
+        },
+        {
+          "name": "Get Patient",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/patients/{{patient_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "patients", "{{patient_id}}"] },
+            "description": "Path param: patient_id. Requires Bearer auth. 404 if not found / not owned by this doctor."
+          }
+        },
+        {
+          "name": "Get Patient History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/patients/{{patient_id}}/history", "host": ["{{base_url}}"], "path": ["api", "v1", "patients", "{{patient_id}}", "history"] },
+            "description": "Path param: patient_id. Requires Bearer auth. Returns {\"patient\": {...}, \"sessions\": [...] }."
+          }
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John A. Smith\",\n  \"age\": 35,\n  \"gender\": \"male\",\n  \"phone\": \"+1234567891\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/patients/{{patient_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "patients", "{{patient_id}}"] },
+            "description": "Path param: patient_id. Body: all fields optional (name, age, gender, phone) — only non-null fields are applied. Requires Bearer auth. 400 if no fields set, 404 if not found."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultation",
+      "item": [
+        {
+          "name": "Start Consultation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.session_id) { pm.collectionVariables.set('session_id', data.session_id); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialty\": \"general_medicine\",\n  \"patient_language\": \"en\",\n  \"patient_name\": \"John Smith\",\n  \"patient_age\": 34,\n  \"patient_gender\": \"male\",\n  \"chief_complaint\": \"Headache for 3 days\",\n  \"patient_id\": \"{{patient_id}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/start", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "start"] },
+            "description": "Body: specialty (required enum: general_medicine | psychotherapy | gynecology), patient_language, patient_name, patient_age, patient_gender, chief_complaint, patient_id (optional — if provided, overrides name/age/gender from the patient record; 404 if not found).\nRequires Bearer auth. Response: session_id, specialty, stage, opening_question."
+          }
+        },
+        {
+          "name": "Get Session State",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}"] },
+            "description": "Path param: session_id. Requires Bearer auth. Response: session_id, specialty, current_stage, qa_count, flags[], history_complete, has_summary, has_diagnosis, has_prescription. 404 if not found."
+          }
+        },
+        {
+          "name": "Submit Answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"The headache started 3 days ago and is throbbing in nature.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/answer", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "answer"] },
+            "description": "Path param: session_id. Body: answer (required). Requires Bearer auth. Response: new_flags[], next_question?, history_complete. 400 if session not in questionnaire stage / no active question."
+          }
+        },
+        {
+          "name": "Submit Answer (Stream - SSE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"The headache started 3 days ago and is throbbing in nature.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/answer-stream", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "answer-stream"] },
+            "description": "Path param: session_id. Body: answer (required). Requires Bearer auth. Response: text/event-stream — events 'token' {text}, 'error' {message}, 'done' {next_question, history_complete, new_flags}. Postman will show the raw stream body."
+          }
+        },
+        {
+          "name": "Submit Answer (Audio Upload)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "audio_file", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/answer-audio", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "answer-audio"] },
+            "description": "Path param: session_id. multipart/form-data field: audio_file (required file). Requires Bearer auth. Uploads audio to R2, transcribes via Deepgram, optionally translates, then processes like /answer. 400 if wrong stage / no active question."
+          }
+        },
+        {
+          "name": "Get QA Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/qa-log", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "qa-log"] },
+            "description": "Path param: session_id. Requires Bearer auth. Response: qa_log[] ({question_id, question_text, answer}), flags[], raw_transcript, translated_transcript."
+          }
+        },
+        {
+          "name": "Edit Answer",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"Updated answer text.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/answer/{{question_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultation", "{{session_id}}", "answer", "{{question_id}}"]
+            },
+            "description": "Path params: session_id, question_id. Body: answer (required). Requires Bearer auth. Response: {\"ok\": true}. 404 if question_id not found in qa_log."
+          }
+        },
+        {
+          "name": "Pipeline (SSE stream)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/pipeline?token={{access_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultation", "{{session_id}}", "pipeline"],
+              "query": [{ "key": "token", "value": "{{access_token}}" }]
+            },
+            "description": "Path param: session_id. Auth via query param ?token=<access_token> (NOT the Bearer header) since EventSource can't set headers. Response: SSE stream — sequential steps (translate, completeness, summarize, diagnose), each 'step' event with status running|done, then final 'complete' event {note, diagnosis} or 'error'."
+          }
+        },
+        {
+          "name": "Prescribe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed_diagnosis\": \"Tension headache\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/prescribe", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "prescribe"] },
+            "description": "Path param: session_id. Body: confirmed_diagnosis (required). Requires Bearer auth. Response: {\"prescription\": {...}}."
+          }
+        },
+        {
+          "name": "Finalize Consultation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/finalize", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "finalize"] },
+            "description": "Path param: session_id. No body. Requires Bearer auth. Response: full ConsultationContext object (session_id, specialty, stage, qa_log, flags, summary, diagnosis, prescription, overrides, etc.)."
+          }
+        },
+        {
+          "name": "Override Field",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"field\": \"diagnosis\",\n  \"value\": \"Migraine\",\n  \"reason\": \"Clinician correction after review\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/override", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}", "override"] },
+            "description": "Path param: session_id. Body: field (required — name of a ConsultationContext attribute), value (required, any type), reason (optional). Requires Bearer auth. Response: {\"overridden\": field, \"new_value\": value}."
+          }
+        },
+        {
+          "name": "Delete Consultation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/v1/consultation/{{session_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "consultation", "{{session_id}}"] },
+            "description": "Path param: session_id. Requires Bearer auth. Response: {\"deleted\": session_id}.\nNote: as of the current backend code, this handler appears to call an internal helper with a missing required argument and may raise a 500/TypeError at runtime — test directly."
+          }
+        },
+        {
+          "name": "Voice Stream (WebSocket)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultation/{{session_id}}/voice-stream?token={{access_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultation", "{{session_id}}", "voice-stream"],
+              "query": [{ "key": "token", "value": "{{access_token}}" }]
+            },
+            "description": "WEBSOCKET endpoint — in Postman, create/use a WebSocket request pointed at ws://{{base_url as host}}/api/v1/consultation/{{session_id}}/voice-stream?token={{access_token}} (Postman's REST request type doesn't actually connect via WS; use the WebSocket request type and paste this URL with ws:// scheme).\nProtocol: client sends {\"type\":\"start\",\"mime_type\":\"audio/webm;codecs=opus\"} first, then binary audio frames, then {\"type\":\"stop\"} (or disconnect). Server sends JSON messages: ready, ack {bytes}, processing, transcript {text}, token {text}, done {transcript, next_question, history_complete, new_flags}, error {message}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "TTS",
+      "item": [
+        {
+          "name": "Speak (Text to Speech)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Please describe your symptoms in detail.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/note/speak", "host": ["{{base_url}}"], "path": ["api", "v1", "note", "speak"] },
+            "description": "Body: text (required). Requires Bearer auth. Response: raw audio bytes, media_type audio/mpeg (MP3) — not JSON. In Postman, use 'Send and Download' or preview as audio."
+          }
+        }
+      ]
+    }
+  ]
+}
