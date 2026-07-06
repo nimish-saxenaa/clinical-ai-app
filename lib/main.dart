@@ -1,11 +1,16 @@
 import 'package:clinical_ai_app/Screens/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'Models/patient_list_model.dart';
 import 'Screens/home_screen.dart';
 import 'Screens/welcome_screen.dart';
 import 'app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(ChangeNotifierProvider(
+  create: (_) => PatientListProvider(),
+  child: const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {

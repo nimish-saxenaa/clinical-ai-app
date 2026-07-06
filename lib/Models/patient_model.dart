@@ -1,5 +1,6 @@
 class Patient {
-  final String id;
+  final String patientId;
+  final String? doctorId;
   final String name;
   final int age;
   final String? gender;
@@ -8,7 +9,8 @@ class Patient {
   final String? updatedAt;
 
   Patient({
-    required this.id,
+    required this.patientId,
+    this.doctorId,
     required this.name,
     required this.age,
     this.gender,
@@ -19,8 +21,8 @@ class Patient {
 
   factory Patient.fromJson(Map<String, dynamic> json) {
     return Patient(
-      // API sometimes returns "id", sometimes "patient_id"
-      id: (json['id'] ?? json['patient_id'] ?? '').toString(),
+      patientId: (json['patient_id'] ?? json['id'] ?? '').toString(),
+      doctorId: json['doctor_id']?.toString(),
       name: json['name'] ?? '',
       age: json['age'] is int
           ? json['age']
@@ -34,7 +36,8 @@ class Patient {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'patient_id': patientId,
+      'doctor_id': doctorId,
       'name': name,
       'age': age,
       'gender': gender,
@@ -46,5 +49,5 @@ class Patient {
 
   @override
   String toString() =>
-      'Patient(id: $id, name: $name, age: $age, gender: $gender, phone: $phone)';
+      'Patient(patientId: $patientId, name: $name, age: $age, gender: $gender, phone: $phone)';
 }

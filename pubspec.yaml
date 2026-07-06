@@ -18,6 +18,12 @@ dependencies:
   http:
   flutter_secure_storage:
   intl:
+  provider:
+  record:
+  path_provider:
+  permission_handler:
+  web_socket:
+  web_socket_channel:
 
 dev_dependencies:
   flutter_test:

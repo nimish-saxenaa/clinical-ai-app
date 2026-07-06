@@ -18,4 +18,8 @@ class AppColors {
   static const success = Color(0xFF22C55E);
   static const error = Color(0xFFEF4444);
   static const warning = Color(0xFFF59E0B);
+  static const diagnosedPrimary = Color(0xFF7c3aed);
+  static const diagnosedLight = Color(0xFFf5f3ff);
+  static const progressPrimary = Color(0xFFb45309);
+  static const progressLight = Color(0xFFfffbeb);
 }

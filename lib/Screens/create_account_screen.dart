@@ -1,11 +1,18 @@
 import 'package:clinical_ai_app/Screens/login_screen.dart';
+import 'package:clinical_ai_app/Services/auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../Custom Widgets/CustomAlertDialog.dart';
 import '../Custom Widgets/custom_button.dart';
 import '../Custom Widgets/custom_text_field.dart';
 import '../Custom Widgets/logo_text.dart';
+import '../Models/patient_list_model.dart';
+import '../Services/patient_service.dart';
+import '../access_token.dart';
 import '../colors.dart';
+import 'home_screen.dart';
+import 'package:provider/provider.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   CreateAccountScreen({super.key});
@@ -15,6 +22,7 @@ class CreateAccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final patientsProvider = context.read<PatientListProvider>();
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -59,7 +67,49 @@ class CreateAccountScreen extends StatelessWidget {
                     fieldName: 'Password',
                   ),
                   const SizedBox(height: 16),
-                  CustomButton(onPressed: () {}, text: 'Create Account'),
+                  CustomButton(
+                    onPressed: () async {
+                      if (emailController.text.isEmpty ||
+                          !emailController.text.contains("@")) {
+                        if (!context.mounted) return;
+                        showCustomDialog("Enter a valid Email", context);
+                        return;
+                      } else if (passwordController.text.isEmpty) {
+                        if (!context.mounted) return;
+                        showCustomDialog("Enter a valid Password", context);
+                        return;
+                      } else if (nameController.text.isEmpty) {
+                        if (!context.mounted) return;
+                        showCustomDialog("Enter a valid Name", context);
+                        return;
+                      }
+                      var response = await createAccount(
+                        name: nameController.text,
+                        email: emailController.text,
+                        password: passwordController.text,
+                      );
+                      if (response['access_token'] != null) {
+                        AccessTokenService.saveToken(response['access_token']);
+                        PatientListProvider patientList = await listPatients();
+                        patientsProvider.setPatients(patientList.patients!);
+                        if (!context.mounted) return;
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                HomeScreen(),
+                          ),
+                        );
+                      } else {
+                        if (!context.mounted) return;
+                        showCustomDialog(
+                          response['detail'].toString(),
+                          context,
+                        );
+                      }
+                    },
+                    text: 'Create Account',
+                  ),
                   const SizedBox(height: 16),
                   Center(
                     child: RichText(

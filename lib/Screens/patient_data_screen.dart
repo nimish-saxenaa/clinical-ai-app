@@ -1,13 +1,19 @@
 import 'package:clinical_ai_app/Custom%20Widgets/custom_button.dart';
+import 'package:clinical_ai_app/Custom%20Widgets/custom_name_initial.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/diagnosis_card.dart';
+import 'package:clinical_ai_app/functions.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../Models/patient_response_history_model.dart';
 import '../colors.dart';
+import 'consultation_screen.dart';
 import 'new_consultation_screen.dart';
 
 class PatientDataScreen extends StatelessWidget {
-  const PatientDataScreen({super.key});
+  const PatientDataScreen({super.key, required this.history});
+  final PatientHistoryResponse history;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +34,10 @@ class PatientDataScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Text("Patient Name", style: Theme.of(context).textTheme.bodyLarge),
+            Text(
+              history.patient.name,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           ],
         ),
         actions: [
@@ -51,13 +60,10 @@ class PatientDataScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.red,
-                      ),
-                      width: 50,
-                      height: 50,
+                    CustomNameInitial(
+                      gender: history.patient.gender ?? "",
+                      name: history.patient.name,
+                      size: 60,
                     ),
                     Expanded(
                       child: Padding(
@@ -67,13 +73,14 @@ class PatientDataScreen extends StatelessWidget {
                           children: [
                             RichText(
                               text: TextSpan(
-                                text: "Nimish",
+                                text: history.patient.name,
                                 style: Theme.of(
                                   context,
-                                ).textTheme.headlineLarge?.copyWith(height: 1),
+                                ).textTheme.headlineMedium,
                                 children: [
                                   TextSpan(
-                                    text: "\n22 Years · Male",
+                                    text:
+                                        "\n${history.patient.age} Yrs · ${history.patient.gender}",
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodyMedium,
@@ -87,11 +94,17 @@ class PatientDataScreen extends StatelessWidget {
                               children: [
                                 IconText(
                                   icon: LucideIcons.calendar,
-                                  text: "Registered 3 Jul 2026",
+                                  text: DateFormat('d MMM yy').format(
+                                    DateTime.parse(
+                                      history.patient.createdAt ??
+                                          DateTime.now().toString(),
+                                    ),
+                                  ),
                                 ),
                                 IconText(
                                   icon: LucideIcons.stethoscope,
-                                  text: '0 Consultations',
+                                  text:
+                                      '${history.sessions.length} Consultations',
                                 ),
                               ],
                             ),
@@ -108,7 +121,22 @@ class PatientDataScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NewConsultationScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => NewConsultationScreen(
+                      patientName: history.patient.name,
+                      patientAge: history.patient.age,
+                      patientGender: history.patient.gender ?? "",
+                      onBegin: (type, complaint, language) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ConsultationScreen(),
+                          ),
+                        );
+                        // TODO: navigate to consultation screen with these params
+                      },
+                    ),
+                  ),
                 );
               },
               text: "+ New Consultation",
@@ -120,7 +148,7 @@ class PatientDataScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.displaySmall,
                 children: [
                   TextSpan(
-                    text: "3",
+                    text: "${history.sessions.length}",
                     style: Theme.of(
                       context,
                     ).textTheme.bodyLarge?.copyWith(color: AppColors.grey),
@@ -128,71 +156,106 @@ class PatientDataScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: DiagnosisCard(
-                  title: "Women's Health",
-                  status: 'Diagnosed',
-                  date: DateTime(2026, 7, 3, 13, 43),
-                  description: 'periods pain',
-                  redFlags: const [
-                    '⚠️ HIGH PAIN SEVERITY (8/10) with 2-week duration of dysmenorrhoea — this exceeds typical primary dysmenorrhoea and mandates urgent evaluation for underlying structural or inflammatory pathology.',
-                    '⚠️ OCP use without adequate pain control is a significant red flag for secondary dysmenorrhoea (e.g., endometriosis, adenomyosis, fibroids) — hormonal therapy failure should prompt expedited investigation.',
-                    '⚠️ PID must be actively excluded: absence of documented pelvic examination, temperature, cervical motion tenderness assessment, and vaginal/cervical swab results represents a critical clinical gap.',
-                    '⚠️ Vital signs and physical/pelvic examination findings are not documented — these are essential for risk stratification and must be completed urgently.',
-                    '⚠️ No review of systems documented — associated symptoms (fever, abnormal vaginal discharge, dyspareunia, dyschezia, urinary symptoms, GI symptoms) are critical to narrowing the differential and must be elicited.',
-                  ],
-                  diagnoses: const [
-                    DiagnosisItem(
-                      severity: 'High',
-                      name: 'Endometriosis',
-                      code: 'N80.9',
+            const SizedBox(height: 16),
+            history.sessions.isNotEmpty
+                ? Expanded(
+                    child: ListView.builder(
+                      itemCount: history.sessions.length,
+                      itemBuilder: (context, index) {
+                        return DiagnosisCard(
+                          title: getSpecialtyName(
+                            history.sessions[index].specialty ?? "",
+                          ),
+                          status: getDiagnosisStatus(
+                            history.sessions[index].currentStage ?? "",
+                          ),
+                          date: DateTime.parse(history.sessions[index].createdAt ?? DateTime.now().toString()),
+                          description:
+                              history.sessions[index].chiefComplaint ?? "",
+                          redFlags:
+                              history
+                                  .sessions[index]
+                                  .diagnosis
+                                  ?.urgentConcerns ??
+                              [],
+                          diagnoses: [
+                            DiagnosisItem(
+                              severity:
+                                  "${history.sessions[index].diagnosis?.differentialDiagnoses[0].likelihood}",
+                              name: 'Endometriosis',
+                              code: 'N80.9',
+                            ),
+                            const DiagnosisItem(
+                              severity: 'Moderate',
+                              name: 'Primary Dysmenorrhoea',
+                              code: 'N94.4',
+                            ),
+                            const DiagnosisItem(
+                              severity: 'Moderate',
+                              name: 'Uterine Fibroids (Leiomyomata)',
+                              code: 'D25.9',
+                            ),
+                          ],
+                          workup:
+                              "${history.sessions[index].diagnosis?.suggestedWorkup.take(2).join("\n") ?? ""} + ${history.sessions[index].diagnosis?.suggestedWorkup.length ?? 2 - 2} more",
+                          subjective: [
+                            SoapField(
+                              label: 'Chief complaint',
+                              value: 'Period pain',
+                            ),
+                            SoapField(
+                              label: 'HPI',
+                              value:
+                                  "${history.sessions[index].summary.subjective.historyOfPresentingIllness}",
+                            ),
+                            SoapField(
+                              label: 'Past medical history',
+                              value:
+                                  "${history.sessions[index].summary.subjective.pastMedicalHistory}",
+                            ),
+                            SoapField(
+                              label: 'Surgical history',
+                              value:
+                                  "${history.sessions[index].summary.subjective.surgicalHistory}",
+                            ),
+                            SoapField(
+                              label: 'Medications',
+                              value:
+                                  "${history.sessions[index].summary.subjective.medications}",
+                            ),
+                            SoapField(
+                              label: 'Allergies',
+                              value:
+                                  "${history.sessions[index].summary.subjective.allergies}",
+                            ),
+                            SoapField(
+                              label: 'Family history',
+                              value:
+                                  "${history.sessions[index].summary.subjective.familyHistory}",
+                            ),
+                            SoapField(
+                              label: 'Social history',
+                              value:
+                                  "${history.sessions[index].summary.subjective.socialHistory}",
+                            ),
+                            SoapField(
+                              label: 'Review of systems',
+                              value:
+                                  "${history.sessions[index].summary.subjective.reviewOfSystems}",
+                            ),
+                          ],
+                          objective: [
+                            SoapField(label: 'Vital signs'),
+                            SoapField(label: 'Physical exam'),
+                          ],
+                          show: history.sessions[index].diagnosis != null
+                              ? true
+                              : false,
+                        );
+                      },
                     ),
-                    DiagnosisItem(
-                      severity: 'Moderate',
-                      name: 'Primary Dysmenorrhoea',
-                      code: 'N94.4',
-                    ),
-                    DiagnosisItem(
-                      severity: 'Moderate',
-                      name: 'Uterine Fibroids (Leiomyomata)',
-                      code: 'D25.9',
-                    ),
-                  ],
-                  workup:
-                      'Workup: 1. COMPLETE PELVIC EXAMINATION — bimanual and speculum exam to assess '
-                      'uterine size/tenderness, adnexal masses, cervical motion tenderness, and abnormal '
-                      'discharge., 2. TRANSVAGINAL ULTRASOUND (TVUS) — first-line imaging to evaluate for '
-                      'fibroids, adenomyosis, ovarian cysts/endometriomas, and uterine anomalies. +10 more',
-                  subjective: const [
-                    SoapField(label: 'Chief complaint', value: 'Period pain'),
-                    SoapField(
-                      label: 'HPI',
-                      value:
-                          'Patient Shantanu presents with a 2-week history of period pain '
-                          'rated 8/10 in severity.',
-                    ),
-                    SoapField(label: 'Past medical history'),
-                    SoapField(label: 'Surgical history'),
-                    SoapField(
-                      label: 'Medications',
-                      value: 'Oral contraceptive (birth control)',
-                    ),
-                    SoapField(label: 'Allergies'),
-                    SoapField(label: 'Family history'),
-                    SoapField(
-                      label: 'Social history',
-                      value: 'Work-related stress reported.',
-                    ),
-                    SoapField(label: 'Review of systems'),
-                  ],
-                  objective: const [
-                    SoapField(label: 'Vital signs'),
-                    SoapField(label: 'Physical exam'),
-                  ],
-                ),
-              ),
-            ),
+                  )
+                : const NoConsultationsEmptyState(),
           ],
         ),
       ),
@@ -213,6 +276,55 @@ class IconText extends StatelessWidget {
         SizedBox(width: 8),
         Text(text),
       ],
+    );
+  }
+}
+
+class NoConsultationsEmptyState extends StatelessWidget {
+  const NoConsultationsEmptyState({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.grey.withAlpha(50), // gray-200
+          width: 2,
+          style: BorderStyle.solid, // see note below for true "dashed"
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight, // brand-light
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              LucideIcons.stethoscope, // stethoscope stand-in
+              size: 20,
+              color: AppColors.primary, // brand
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No consultations yet',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Start the first one using the button above.',
+            style: Theme.of(context).textTheme.bodyMedium, // gray-400
+          ),
+        ],
+      ),
     );
   }
 }

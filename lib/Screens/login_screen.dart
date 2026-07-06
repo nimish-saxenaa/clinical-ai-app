@@ -5,6 +5,7 @@ import 'package:clinical_ai_app/Services/patient_service.dart';
 import 'package:clinical_ai_app/access_token.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../Custom Widgets/CustomAlertDialog.dart';
 import '../Custom Widgets/custom_button.dart';
@@ -18,8 +19,13 @@ class LoginScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  void dispose(){
+    emailController.dispose();
+    passwordController.dispose();
+  }
   @override
   Widget build(BuildContext context) {
+    final patientsProvider = context.read<PatientListProvider>();
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -79,13 +85,15 @@ class LoginScreen extends StatelessWidget {
                       );
                       if (response['access_token'] != null) {
                         AccessTokenService.saveToken(response['access_token']);
-                        PatientListResponse patientList = await listPatients();
+                        PatientListProvider patientList = await listPatients();
+
+                        patientsProvider.setPatients(patientList.patients!);
                         if (!context.mounted) return;
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
-                                HomeScreen(patientList: patientList),
+                                HomeScreen(),
                           ),
                         );
                       } else {

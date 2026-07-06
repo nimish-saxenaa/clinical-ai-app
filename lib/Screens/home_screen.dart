@@ -1,3 +1,4 @@
+import 'package:clinical_ai_app/Custom%20Widgets/custom_name_initial.dart';
 import 'package:clinical_ai_app/Models/patient_list_model.dart';
 import 'package:clinical_ai_app/Models/patient_model.dart';
 import 'package:clinical_ai_app/Screens/patient_data_screen.dart';
@@ -5,16 +6,18 @@ import 'package:clinical_ai_app/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../Custom Widgets/new_patient_form.dart';
+import '../Services/patient_service.dart';
 import '../functions.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.patientList});
-
-  final PatientListResponse patientList;
+  const HomeScreen({super.key,});
 
   @override
   Widget build(BuildContext context) {
+    final patientsProvider = context.watch<PatientListProvider>();
+    final List<Patient> patientList = patientsProvider.patients!;
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
@@ -46,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineLarge,
                 children: [
                   TextSpan(
-                    text: "3",
+                    text: "${patientList.length}",
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ],
@@ -72,10 +75,16 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
-                itemCount: patientList.patients.length,
+                itemCount: patientList.length,
                 itemBuilder: (context, index) {
-                  return CustomPatientBubble(
-                    patient: patientList.patients[index],
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CustomPatientBubble(
+                        patient: patientList[index],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   );
                 },
               ),
@@ -103,11 +112,14 @@ class CustomPatientBubble extends StatelessWidget {
           color: Colors.white,
         ),
         child: InkWell(
+          splashColor: AppColors.primary.withAlpha(25),
           borderRadius: BorderRadius.circular(12),
-          onTap: () {
+          onTap: () async {
+            var history = await getPatientHistory(patientId: patient.patientId);
+            if(!context.mounted) return;
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => PatientDataScreen()),
+              MaterialPageRoute(builder: (_) => PatientDataScreen(history: history,)),
             );
           },
           child: Padding(
@@ -116,31 +128,7 @@ class CustomPatientBubble extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: patient.gender == "Male"
-                            ? AppColors.secondaryMale
-                            : patient.gender == "Female"
-                            ? AppColors.secondaryFemale
-                            : AppColors.secondaryOther,
-                      ),
-                      width: 50,
-                      height: 50,
-                      child: Center(
-                        child: Text(
-                          getInitials(patient.name),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: patient.gender == "Male"
-                                    ? AppColors.primaryMale
-                                    : patient.gender == "Female"
-                                    ? AppColors.primaryFemale
-                                    : AppColors.primaryOther,
-                              ),
-                        ),
-                      ),
-                    ),
+                    CustomNameInitial(gender: patient.gender ?? "", name: patient.name),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8.0),
@@ -151,7 +139,7 @@ class CustomPatientBubble extends StatelessWidget {
                             children: [
                               TextSpan(
                                 text:
-                                    "\n${patient.age} Yrs · ${patient.gender}",
+                                    "\n${patient.age} Yrs · ${patient.gender??""}",
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -192,7 +180,7 @@ class GenderLabel extends StatelessWidget {
   final Patient patient;
   @override
   Widget build(BuildContext context) {
-    return Container(
+      if(patient.gender != null) {return Container(
       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -220,6 +208,9 @@ class GenderLabel extends StatelessWidget {
               : AppColors.primaryOther,
         ),
       ),
-    );
+    );}
+      else{
+        return Container();
+      }
   }
 }

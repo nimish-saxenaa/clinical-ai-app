@@ -31,21 +31,19 @@ Future<Patient> createPatient({
   return Patient.fromJson(jsonDecode(response.body));
 }
 
-Future<PatientListResponse> listPatients() async {
+Future<PatientListProvider> listPatients() async {
   Uri url = Uri.parse("$baseUrl/api/v1/patients");
-String token = await AccessTokenService.getToken() ?? "";
+  String token = await AccessTokenService.getToken() ?? "";
   final response = await http.get(
     url,
     headers: {"Authorization": "Bearer $token"},
   );
-  return PatientListResponse.fromJson(jsonDecode(response.body));
+  return PatientListProvider.fromJson(jsonDecode(response.body));
 }
 
-Future<Patient> getPatient({
-  required String patientId,
-}) async {
+Future<Patient> getPatient({required String patientId}) async {
   Uri url = Uri.parse("$baseUrl/api/v1/patients/$patientId");
-String token = await AccessTokenService.getToken() ?? "";
+  String token = await AccessTokenService.getToken() ?? "";
   final response = await http.get(
     url,
     headers: {"Authorization": "Bearer $token"},
@@ -73,7 +71,7 @@ Future<Patient> updatePatient({
   String? phone,
 }) async {
   Uri url = Uri.parse("$baseUrl/api/v1/patients/$patientId");
-String token = await AccessTokenService.getToken() ?? "";
+  String token = await AccessTokenService.getToken() ?? "";
   final response = await http.patch(
     url,
     headers: {

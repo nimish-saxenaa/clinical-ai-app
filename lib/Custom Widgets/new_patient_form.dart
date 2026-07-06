@@ -1,7 +1,8 @@
 import 'package:clinical_ai_app/Custom%20Widgets/custom_button.dart';
 import 'package:clinical_ai_app/colors.dart';
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
+import '../Models/patient_list_model.dart';
 import '../Services/patient_service.dart';
 
 /// Full "New Patient" sheet/dialog: header + form.
@@ -43,7 +44,7 @@ class _NewPatientFormState extends State<NewPatientForm> {
     }
     widget.onCreate?.call(
       _nameController.text.trim(),
-      _ageController.text.trim() as int,
+      int.tryParse(_ageController.text.trim()) ?? 0,
       _selectedGender,
       _phoneController.text.trim(),
     );
@@ -121,7 +122,7 @@ class _NewPatientFormState extends State<NewPatientForm> {
                                 Expanded(
                                   child: GenderButton(
                                     label: 'Female',
-                                    selected: male,
+                                    selected: female,
                                     onTap: () {
                                       setState(() {
                                         _selectedGender = "Female";
@@ -136,7 +137,7 @@ class _NewPatientFormState extends State<NewPatientForm> {
                                 Expanded(
                                   child: GenderButton(
                                     label: 'Other',
-                                    selected: male,
+                                    selected: other,
                                     onTap: () {
                                       setState(() {
                                         _selectedGender = "Other";
@@ -403,12 +404,16 @@ Future<void> showNewPatientDialog(BuildContext context) {
             onClose: () => Navigator.of(context).pop(),
             onCreate: (name, age, gender, phone) async {
               // TODO: handle patient creation
-              await createPatient(
+              var patient = await createPatient(
                 name: name,
                 gender: gender,
                 age: age,
                 phone: phone,
               );
+              if (!context.mounted) return;
+              final patientsProvider = context.read<PatientListProvider>();
+              PatientListProvider patientList = await listPatients();
+              patientsProvider.setPatients(patientList.patients!);
               if (!context.mounted) return;
               Navigator.of(context).pop();
             },

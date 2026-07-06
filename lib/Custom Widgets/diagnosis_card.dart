@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../colors.dart';
 
 /// ---------- Data models ----------
 
@@ -35,6 +38,7 @@ class DiagnosisCard extends StatefulWidget {
 
   final List<SoapField> subjective;
   final List<SoapField> objective;
+  final bool show;
 
   const DiagnosisCard({
     super.key,
@@ -46,7 +50,7 @@ class DiagnosisCard extends StatefulWidget {
     required this.diagnoses,
     required this.workup,
     required this.subjective,
-    required this.objective,
+    required this.objective, required this.show,
   });
 
   @override
@@ -81,6 +85,7 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFF3F4F6)), // gray-100
@@ -113,30 +118,21 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
                             children: [
                               Text(
                                 widget.title,
-                                style: const TextStyle(
-                                  color: Color(0xFF111827),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F3FF),
+                                  color: widget.status == "Diagnosed" ? AppColors.diagnosedLight : AppColors.progressLight,
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: const Color(0xFFDDD6FE),
-                                  ),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
+                                    width: 1,
+                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : AppColors.progressPrimary,
+                                ),),
                                 child: Text(
                                   widget.status,
-                                  style: const TextStyle(
-                                    color: Color(0xFF7C3AED),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : AppColors.progressPrimary,
                                   ),
                                 ),
                               ),
@@ -147,7 +143,7 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
-                                Icons.calendar_today_outlined,
+                                LucideIcons.calendar,
                                 size: 12,
                                 color: Color(0xFFD1D5DB),
                               ),
@@ -197,13 +193,13 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
               diagnoses: widget.diagnoses,
               workup: widget.workup,
               subjective: widget.subjective,
-              objective: widget.objective,
+              objective: widget.objective, show: widget.show,
             ),
             crossFadeState: _expanded
                 ? CrossFadeState.showSecond
                 : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-            sizeCurve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 0),
+            sizeCurve: Curves.ease,
           ),
         ],
       ),
@@ -219,13 +215,13 @@ class _ExpandedBody extends StatelessWidget {
   final String workup;
   final List<SoapField> subjective;
   final List<SoapField> objective;
-
+  final bool show;
   const _ExpandedBody({
     required this.redFlags,
     required this.diagnoses,
     required this.workup,
     required this.subjective,
-    required this.objective,
+    required this.objective, required this.show,
   });
 
   @override
@@ -237,7 +233,7 @@ class _ExpandedBody extends StatelessWidget {
         border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Column(
+      child: show? Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionLabel('Diagnosis'),
@@ -277,7 +273,7 @@ class _ExpandedBody extends StatelessWidget {
           const SizedBox(height: 20),
           _SoapSection(letter: 'O', title: 'Objective', fields: objective),
         ],
-      ),
+      ) : Text("No diagnosis recorded yet.", style: Theme.of(context).textTheme.bodyMedium,),
     );
   }
 }

@@ -5,7 +5,7 @@ String getInitials(String name) {
 
   return parts
       .where((part) => part.isNotEmpty)
-      .map((part) => part[0])
+      .map((part) => part[0].toUpperCase())
       .join();
 }
 
@@ -26,4 +26,26 @@ String formatDate(DateTime d) {
   ];
 
   return '${d.day} ${months[d.month - 1]} ${d.year}, ';
+}
+
+String getSpecialtyName(String specialty) {
+  switch (specialty) {
+    case "general_medicine":
+      return "General Medicine";
+    case "genecology":
+      return "Women's Health";
+    case "psychotherapy":
+      return "Mental Health";
+    default:
+      return specialty;
+  }
+}
+
+String getDiagnosisStatus(String status) {
+  const statuses = {
+    "diagnosis": "Diagnosed",
+    "questionnaire": "In Progress",
+  };
+
+  return statuses[status] ?? status;
 }
