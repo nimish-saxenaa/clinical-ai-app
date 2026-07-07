@@ -66,6 +66,8 @@ class NewConsultationScreen extends StatefulWidget {
   final void Function(ConsultationType type, String complaint, String language)?
   onBegin;
 
+  static const routeName = "/new-consultation";
+
   const NewConsultationScreen({
     super.key,
     required this.patientName,

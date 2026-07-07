@@ -32,7 +32,7 @@ String getSpecialtyName(String specialty) {
   switch (specialty) {
     case "general_medicine":
       return "General Medicine";
-    case "genecology":
+    case "gynecology":
       return "Women's Health";
     case "psychotherapy":
       return "Mental Health";
@@ -45,6 +45,7 @@ String getDiagnosisStatus(String status) {
   const statuses = {
     "diagnosis": "Diagnosed",
     "questionnaire": "In Progress",
+    "finalized": "Finalized",
   };
 
   return statuses[status] ?? status;

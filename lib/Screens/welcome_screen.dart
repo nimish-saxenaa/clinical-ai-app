@@ -6,6 +6,7 @@ import '../Custom Widgets/logo_text.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+  static const routeName = "/welcome";
 
   @override
   Widget build(BuildContext context) {

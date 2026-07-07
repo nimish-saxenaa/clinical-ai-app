@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   CreateAccountScreen({super.key});
+  static const routeName = "/create-account";
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();

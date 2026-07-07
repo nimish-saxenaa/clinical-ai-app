@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:clinical_ai_app/Services/navigation_service.dart';
 import 'package:http/http.dart' as http;
 import '../Models/patient_list_model.dart';
 import '../Models/patient_model.dart';
@@ -28,6 +29,7 @@ Future<Patient> createPatient({
       "phone": ?phone,
     }),
   );
+  if(response.statusCode != 401) logout();
   return Patient.fromJson(jsonDecode(response.body));
 }
 
@@ -38,6 +40,7 @@ Future<PatientListProvider> listPatients() async {
     url,
     headers: {"Authorization": "Bearer $token"},
   );
+  if(response.statusCode != 401) logout();
   return PatientListProvider.fromJson(jsonDecode(response.body));
 }
 
@@ -48,6 +51,7 @@ Future<Patient> getPatient({required String patientId}) async {
     url,
     headers: {"Authorization": "Bearer $token"},
   );
+  if(response.statusCode != 401) logout();
   return Patient.fromJson(jsonDecode(response.body));
 }
 
@@ -60,6 +64,7 @@ Future<PatientHistoryResponse> getPatientHistory({
     url,
     headers: {"Authorization": "Bearer $token"},
   );
+  if(response.statusCode != 401) logout();
   return PatientHistoryResponse.fromJson(jsonDecode(response.body));
 }
 
@@ -85,5 +90,7 @@ Future<Patient> updatePatient({
       "phone": ?phone,
     }),
   );
+  if(response.statusCode != 401) logout();
   return Patient.fromJson(jsonDecode(response.body));
 }
+

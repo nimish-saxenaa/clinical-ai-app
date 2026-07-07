@@ -22,4 +22,6 @@ class AppColors {
   static const diagnosedLight = Color(0xFFf5f3ff);
   static const progressPrimary = Color(0xFFb45309);
   static const progressLight = Color(0xFFfffbeb);
+  static const finalizedPrimary = Color(0xFF047857);
+  static const finalizedLight = Color(0xFFecfdf5);
 }

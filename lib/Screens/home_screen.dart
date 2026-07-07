@@ -14,6 +14,8 @@ import '../functions.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key,});
 
+  static const routeName = "/home";
+
   @override
   Widget build(BuildContext context) {
     final patientsProvider = context.watch<PatientListProvider>();

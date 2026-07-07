@@ -16,6 +16,7 @@ import '../colors.dart';
 
 class LoginScreen extends StatelessWidget {
   LoginScreen({super.key});
+  static const routeName = "/login";
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 

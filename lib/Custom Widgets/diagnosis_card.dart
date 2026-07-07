@@ -123,16 +123,16 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: widget.status == "Diagnosed" ? AppColors.diagnosedLight : AppColors.progressLight,
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: widget.status == "Diagnosed" ? AppColors.diagnosedLight : widget.status == "In Progress" ? AppColors.progressLight : AppColors.finalizedLight,
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    width: 1,
-                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : AppColors.progressPrimary,
+                                    width: 0.75,
+                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : widget.status == "In Progress" ? AppColors.progressPrimary : AppColors.finalizedPrimary,
                                 ),),
                                 child: Text(
                                   widget.status,
                                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : AppColors.progressPrimary,
+                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : widget.status == "In Progress" ? AppColors.progressPrimary : AppColors.finalizedPrimary,
                                   ),
                                 ),
                               ),
@@ -186,20 +186,21 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
               ),
             ),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox(width: double.infinity, height: 0),
-            secondChild: _ExpandedBody(
-              redFlags: widget.redFlags,
-              diagnoses: widget.diagnoses,
-              workup: widget.workup,
-              subjective: widget.subjective,
-              objective: widget.objective, show: widget.show,
+          if(_expanded && widget.show) _ExpandedBody(
+            redFlags: widget.redFlags,
+            diagnoses: widget.diagnoses,
+            workup: widget.workup,
+            subjective: widget.subjective,
+            objective: widget.objective, show: widget.show,
+          ),
+          if(_expanded && !widget.show) Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF9FAFB), // gray-50/60 approximation
+              border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
             ),
-            crossFadeState: _expanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 0),
-            sizeCurve: Curves.ease,
+            padding: const EdgeInsets.all(20.0),
+            child: Text("No diagnosis recorded yet.", style: Theme.of(context).textTheme.bodyMedium,),
           ),
         ],
       ),
@@ -207,6 +208,9 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
   }
 }
 
+/*
+
+ */
 /// ---------- Expanded body ----------
 
 class _ExpandedBody extends StatelessWidget {
@@ -226,14 +230,14 @@ class _ExpandedBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return  Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Color(0xFFF9FAFB), // gray-50/60 approximation
         border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: show? Column(
+      child:  Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionLabel('Diagnosis'),
@@ -273,8 +277,8 @@ class _ExpandedBody extends StatelessWidget {
           const SizedBox(height: 20),
           _SoapSection(letter: 'O', title: 'Objective', fields: objective),
         ],
-      ) : Text("No diagnosis recorded yet.", style: Theme.of(context).textTheme.bodyMedium,),
-    );
+      ),
+    ) ;
   }
 }
 
@@ -455,16 +459,16 @@ class _SoapSection extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            (f.value == null || f.value!.isEmpty)
+                            (f.value == null )
                                 ? 'Not recorded'
                                 : f.value!,
                             style: TextStyle(
-                              color: (f.value == null || f.value!.isEmpty)
+                              color: (f.value == null )
                                   ? const Color(0xFFD1D5DB)
                                   : const Color(0xFF374151),
                               fontSize: 12,
                               height: 1.5,
-                              fontStyle: (f.value == null || f.value!.isEmpty)
+                              fontStyle: (f.value == null )
                                   ? FontStyle.italic
                                   : FontStyle.normal,
                             ),
