@@ -2,6 +2,8 @@ import 'package:clinical_ai_app/Services/patient_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../access_token.dart';
+
 String baseUrl = "https://med-history-agent.decrackle.io";
 
 Future<Map<String, dynamic>> login({
@@ -35,16 +37,17 @@ Future<Map<String, dynamic>> createAccount({
   return jsonDecode(response.body);
 }
 
-Future<Map<String, dynamic>> refreshTokens({
-  required String name,
-  required String email,
-  required String password,
-}) async {
+Future<Map<String, dynamic>> refreshTokens() async {
   Uri url = Uri.parse(
-    "https://med-history-agent.decrackle.io/api/v1/auth/refresh",
+    "$baseUrl/api/v1/auth/refresh",
   );
+  final refreshToken = await AccessTokenService.getRequestToken();
   final response = await http.post(
     url,
+    headers: {
+      "Content-Type": "application/json",
+      "Cookie": "refresh_token=$refreshToken",
+    },
   );
   return jsonDecode(response.body);
 }

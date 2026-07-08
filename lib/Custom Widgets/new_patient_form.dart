@@ -98,7 +98,7 @@ class _NewPatientFormState extends State<NewPatientForm> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _FieldLabel(label: 'Gender', required: true),
+                          const _FieldLabel(label: 'Gender', required: false),
                           const SizedBox(height: 8),
                           SizedBox(
                             height: 48,
@@ -110,8 +110,8 @@ class _NewPatientFormState extends State<NewPatientForm> {
                                     selected: male,
                                     onTap: () {
                                       setState(() {
-                                        _selectedGender = "Male";
-                                        male = true;
+                                        !male? _selectedGender = "Male" : _selectedGender = null;
+                                        male = !male;
                                         female = false;
                                         other = false;
                                       });
@@ -125,9 +125,9 @@ class _NewPatientFormState extends State<NewPatientForm> {
                                     selected: female,
                                     onTap: () {
                                       setState(() {
-                                        _selectedGender = "Female";
+                                        !female? _selectedGender = "Female" : _selectedGender = null;
                                         male = false;
-                                        female = true;
+                                        female = !female;
                                         other = false;
                                       });
                                     },
@@ -140,10 +140,10 @@ class _NewPatientFormState extends State<NewPatientForm> {
                                     selected: other,
                                     onTap: () {
                                       setState(() {
-                                        _selectedGender = "Other";
+                                        !other? _selectedGender = "Other" : _selectedGender = null;
                                         male = false;
                                         female = false;
-                                        other = true;
+                                        other = !other;
                                       });
                                     },
                                   ),
@@ -177,9 +177,9 @@ class _NewPatientFormState extends State<NewPatientForm> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: CustomButton(
+                      child: ElevatedButton(
                         onPressed: _handleCreate,
-                        text: "Create",
+                        child: Text("Create") ,
                       ),
                     ),
                   ],
@@ -404,7 +404,7 @@ Future<void> showNewPatientDialog(BuildContext context) {
             onClose: () => Navigator.of(context).pop(),
             onCreate: (name, age, gender, phone) async {
               // TODO: handle patient creation
-              var patient = await createPatient(
+              await createPatient(
                 name: name,
                 gender: gender,
                 age: age,

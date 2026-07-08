@@ -19,7 +19,7 @@ Future<dynamic> showCustomDialog(String detail, BuildContext context) {
                 const SizedBox(height: 16),
                 CustomButton(
                   onPressed: () => Navigator.pop(context),
-                  text: "OK",
+                  child: Text("OK"),
                 ),
               ],
             ),

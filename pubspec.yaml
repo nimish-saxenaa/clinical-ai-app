@@ -24,6 +24,7 @@ dependencies:
   permission_handler:
   web_socket:
   web_socket_channel:
+  audioplayers:
 
 dev_dependencies:
   flutter_test:

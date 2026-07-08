@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// A single parsed Server-Sent-Event: `event: <name>` + `data: <json/text>`.
+String baseUrl = "https://med-history-agent.decrackle.io";
 class SseEvent {
   final String event;
   final dynamic data; // decoded JSON if possible, otherwise raw string
@@ -19,44 +20,42 @@ class SseEvent {
 /// Events: 'token' {text}, 'error' {message},
 ///         'done' {next_question, history_complete, new_flags}.
 Stream<SseEvent> submitAnswerStream({
-  required String baseUrl,
   required String token,
   required String sessionId,
   required String answer,
 }) async* {
-  final uri = Uri.parse("$baseUrl/api/v1/consultation/$sessionId/answer-stream");
+  final uri = Uri.parse(
+    "$baseUrl/api/v1/consultation/$sessionId/answer-stream",
+  );
+
   final request = http.Request("POST", uri)
     ..headers["Content-Type"] = "application/json"
     ..headers["Authorization"] = "Bearer $token"
-    ..body = jsonEncode({"answer": answer});
+    ..body = jsonEncode({
+      "answer": answer,
+    });
 
-  final streamedResponse = await http.Client().send(request);
+  final response = await http.Client().send(request);
 
-  String? currentEvent;
-  final buffer = StringBuffer();
-
-  await for (final line in streamedResponse.stream
+  await for (final line in response.stream
       .transform(utf8.decoder)
       .transform(const LineSplitter())) {
-    if (line.startsWith("event:")) {
-      currentEvent = line.substring(6).trim();
-    } else if (line.startsWith("data:")) {
-      buffer.write(line.substring(5).trim());
-    } else if (line.isEmpty) {
-      // blank line = end of one SSE message
-      if (currentEvent != null && buffer.isNotEmpty) {
-        final raw = buffer.toString();
-        dynamic decoded;
-        try {
-          decoded = jsonDecode(raw);
-        } catch (_) {
-          decoded = raw;
-        }
-        yield SseEvent(event: currentEvent, data: decoded);
-      }
-      currentEvent = null;
-      buffer.clear();
-    }
+
+    // Ignore empty lines
+    if (line.isEmpty) continue;
+
+    // We only care about lines beginning with "data:"
+    if (!line.startsWith("data:")) continue;
+
+    final jsonString = line.substring(5).trim();
+
+    final Map<String, dynamic> json =
+    jsonDecode(jsonString);
+
+    yield SseEvent(
+      event: json["event"],
+      data: json,
+    );
   }
 }
 
@@ -66,7 +65,6 @@ Stream<SseEvent> submitAnswerStream({
 /// with status running|done, then a final 'complete' event {note, diagnosis}
 /// or 'error'.
 Stream<SseEvent> consultationPipeline({
-  required String baseUrl,
   required String sessionId,
   required String accessToken,
 }) async* {
@@ -134,7 +132,7 @@ class VoiceStreamConnection {
   VoiceStreamConnection._(this._channel, this.messages);
 
   factory VoiceStreamConnection.connect({
-    required String baseUrl, // host only, no scheme, e.g. "example.com" or "example.com:443"
+    // host only, no scheme, e.g. "example.com" or "example.com:443"
     required String sessionId,
     required String accessToken,
     bool secure = true,

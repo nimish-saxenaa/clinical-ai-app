@@ -14,63 +14,69 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LogoAndText(width: width),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Smarter histories.\nBetter outcomes.",
-                          style: Theme.of(context).textTheme.displayLarge,
-                          textAlign: TextAlign.left,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "AI-powered medical history taking that helps you diagnose with confidence and document without the burden.",
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                    Column(
-                      children: [
-
-                        IconText(
-                          text: "Structured patient history in under 5 minutes",
-                        ),
-                        const SizedBox(height: 16),
-                        IconText(text: 'AI-generated differential diagnoses'),
-                        const SizedBox(height: 16),
-                        IconText(text: 'Instant SOAP note documentation'),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: CustomButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LoginScreen(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.heightOf(context),
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LogoAndText(width: width),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Smarter histories.\nBetter outcomes.",
+                            style: Theme.of(context).textTheme.displayLarge,
+                            textAlign: TextAlign.left,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "AI-powered medical history taking that helps you diagnose with confidence and document without the burden.",
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                       ),
-                    );
-                  },
-                  text: 'Get Started',
-                ),
+                      const SizedBox(height: 16),
+                      Column(
+                        children: [
+
+                          IconText(
+                            text: "Structured patient history in under 5 minutes",
+                          ),
+                          const SizedBox(height: 16),
+                          IconText(text: 'AI-generated differential diagnoses'),
+                          const SizedBox(height: 16),
+                          IconText(text: 'Instant SOAP note documentation'),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                  CustomButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LoginScreen(),
+                        ),
+                      );
+                    },
+                    child: Text('Get Started'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

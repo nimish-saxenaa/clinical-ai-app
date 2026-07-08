@@ -7,7 +7,6 @@ import '../colors.dart';
 
 /// ---------- Palette ----------
 
-
 /// ---------- Data model ----------
 
 enum ConsultationType { generalMedicine, mentalHealth, womensHealth }
@@ -179,7 +178,7 @@ class _NewConsultationScreenState extends State<NewConsultationScreen> {
                       _complaintController.text,
                       _languageController.text,
                     ),
-                    text: "Begin Consultation",
+                    child: Text("Begin Consultation"),
                   ),
                 ],
               ),
@@ -234,8 +233,6 @@ class PatientBox extends StatelessWidget {
     );
   }
 }
-
-
 
 /// ---------- Consultation type card ----------
 

@@ -8,19 +8,29 @@ import '../Custom Widgets/custom_button.dart';
 import '../Custom Widgets/custom_text_field.dart';
 import '../Custom Widgets/logo_text.dart';
 import '../Models/patient_list_model.dart';
+import '../Services/navigation_service.dart';
 import '../Services/patient_service.dart';
 import '../access_token.dart';
 import '../colors.dart';
 import 'home_screen.dart';
 import 'package:provider/provider.dart';
 
-class CreateAccountScreen extends StatelessWidget {
-  CreateAccountScreen({super.key});
+class CreateAccountScreen extends StatefulWidget {
+  const CreateAccountScreen({super.key});
   static const routeName = "/create-account";
+
+  @override
+  State<CreateAccountScreen> createState() => _CreateAccountScreenState();
+}
+
+class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final TextEditingController nameController = TextEditingController();
+
   final TextEditingController emailController = TextEditingController();
+
   final TextEditingController passwordController = TextEditingController();
 
+  bool isTapped = false;
   @override
   Widget build(BuildContext context) {
     final patientsProvider = context.read<PatientListProvider>();
@@ -60,16 +70,21 @@ class CreateAccountScreen extends StatelessWidget {
                     hintText: 'dr@hospital.com',
                     controller: emailController,
                     fieldName: "Email address",
+                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 8),
                   CustomTextField(
                     hintText: 'Min. 8 characters',
                     controller: passwordController,
                     fieldName: 'Password',
+                    obscureText: true,
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
                     onPressed: () async {
+                      setState(() {
+                        isTapped = true;
+                      });
                       if (emailController.text.isEmpty ||
                           !emailController.text.contains("@")) {
                         if (!context.mounted) return;
@@ -90,16 +105,14 @@ class CreateAccountScreen extends StatelessWidget {
                         password: passwordController.text,
                       );
                       if (response['access_token'] != null) {
-                        AccessTokenService.saveToken(response['access_token']);
-                        PatientListProvider patientList = await listPatients();
+                        AccessTokenService.saveAccessToken(response['access_token']);
+                        AccessTokenService.saveRefreshToken(response['refresh_token']);
+                        PatientListProvider? patientList = await listPatients();
                         patientsProvider.setPatients(patientList.patients!);
                         if (!context.mounted) return;
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                HomeScreen(),
-                          ),
+                        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                          HomeScreen.routeName,
+                              (route) => false,
                         );
                       } else {
                         if (!context.mounted) return;
@@ -108,8 +121,18 @@ class CreateAccountScreen extends StatelessWidget {
                           context,
                         );
                       }
+                      setState(() {
+                        isTapped = false;
+                      });
                     },
-                    text: 'Create Account',
+                    child: isTapped?  Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white,),
+                        const SizedBox(width: 8),
+                        Text('Creating Account...'),
+                      ],
+                    ) : Text('Create Account'),
                   ),
                   const SizedBox(height: 16),
                   Center(

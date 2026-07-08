@@ -1,6 +1,8 @@
 import 'package:clinical_ai_app/Custom%20Widgets/custom_button.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/custom_name_initial.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/diagnosis_card.dart';
+import 'package:clinical_ai_app/access_token.dart';
+import 'package:clinical_ai_app/consultation_functions.dart';
 import 'package:clinical_ai_app/functions.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -8,7 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../Models/patient_response_history_model.dart';
 import '../colors.dart';
-import 'consultation_screen.dart';
+import 'history_taking_screen.dart';
 import 'new_consultation_screen.dart';
 
 class PatientDataScreen extends StatelessWidget {
@@ -128,11 +130,23 @@ class PatientDataScreen extends StatelessWidget {
                         patientName: history.patient.name,
                         patientAge: history.patient.age,
                         patientGender: history.patient.gender ?? "",
-                        onBegin: (type, complaint, language) {
+                        onBegin: (type, complaint, language) async {
+                          String baseUrl =
+                              "https://med-history-agent.decrackle.io";
+                          String? token = await AccessTokenService.getToken();
+                          var response = await startConsultation(
+                            baseUrl: baseUrl,
+                            token: token!,
+                            specialty: 'general_medicine',
+                          );
+                          if (!context.mounted) return;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => ConsultationScreen(),
+                              builder: (_) => HistoryTakingScreen(
+                                sessionId: response.sessionId,
+                                question: response.openingQuestion!,
+                              ),
                             ),
                           );
                           // TODO: navigate to consultation screen with these params
@@ -141,7 +155,7 @@ class PatientDataScreen extends StatelessWidget {
                     ),
                   );
                 },
-                text: "+ New Consultation",
+                child: Text("+ New Consultation"),
               ),
               const SizedBox(height: 16),
               RichText(
@@ -223,10 +237,17 @@ class PatientDataScreen extends StatelessWidget {
                           ),
                           workup:
                               "Workup: ${history.sessions[index].diagnosis?.suggestedWorkup.take(2).join("\n") ?? ""} + ${history.sessions[index].diagnosis?.suggestedWorkup.length ?? 2 - 2} more",
+
                           subjective: [
                             SoapField(
                               label: 'Chief complaint',
-                              value: history.sessions[index].chiefComplaint,
+                              value:
+                                  history.sessions[index].chiefComplaint ??
+                                  history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .chiefComplaint,
                             ),
                             SoapField(
                               label: 'HPI',

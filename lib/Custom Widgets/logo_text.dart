@@ -7,19 +7,22 @@ class LogoAndText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        children: [
-          Image(
-            image: const AssetImage('assets/kuvaka_logo.png'),
-            width: width / 4,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Clinical AI platform by Kuvaka".toUpperCase(),
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32.0),
+      child: Center(
+        child: Column(
+          children: [
+            Image(
+              image: const AssetImage('assets/kuvaka_logo.png'),
+              width: width / 11,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Clinical AI platform by Kuvaka".toUpperCase(),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       ),
     );
   }

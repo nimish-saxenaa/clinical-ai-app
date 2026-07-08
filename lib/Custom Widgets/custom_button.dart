@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
-  const CustomButton({super.key, required this.onPressed, required this.text});
+  const CustomButton({super.key, required this.onPressed, required this.child});
   final VoidCallback onPressed;
-  final String text;
+  final Widget child;
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -11,7 +11,7 @@ class CustomButton extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 500),
         child: SizedBox(
           width: double.infinity,
-          child: ElevatedButton(onPressed: onPressed, child: Text(text)),
+          child: ElevatedButton(onPressed: onPressed, child: child),
         ),
       ),
     );

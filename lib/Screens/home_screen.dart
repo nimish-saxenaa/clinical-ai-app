@@ -1,3 +1,4 @@
+import 'package:clinical_ai_app/Custom%20Widgets/custom_confirmation_alert.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/custom_name_initial.dart';
 import 'package:clinical_ai_app/Models/patient_list_model.dart';
 import 'package:clinical_ai_app/Models/patient_model.dart';
@@ -8,11 +9,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../Custom Widgets/new_patient_form.dart';
+import '../Services/auth_service.dart';
+import '../Services/navigation_service.dart';
 import '../Services/patient_service.dart';
+import '../access_token.dart';
 import '../functions.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key,});
+  const HomeScreen({super.key});
 
   static const routeName = "/home";
 
@@ -29,7 +33,16 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              showCustomConfirmationAlert(
+                "Do you want to Logout?",
+                context,
+                () async {
+                  await AccessTokenService.clear();
+                  logout();
+                },
+              );
+            },
             icon: const Icon(LucideIcons.logOut, color: AppColors.grey),
           ),
         ],
@@ -68,6 +81,19 @@ class HomeScreen extends StatelessWidget {
             TextField(
               decoration: InputDecoration(
                 fillColor: Colors.white,
+                filled: true,
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: AppColors.grey,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.grey.withAlpha(50), width: 0.3),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: AppColors.grey.withAlpha(50), width: 0.3),
+                ),
                 hintText: "Search Patients...",
                 hintStyle: Theme.of(
                   context,
@@ -82,9 +108,7 @@ class HomeScreen extends StatelessWidget {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CustomPatientBubble(
-                        patient: patientList[index],
-                      ),
+                      CustomPatientBubble(patient: patientList[index]),
                       const SizedBox(height: 16),
                     ],
                   );
@@ -98,15 +122,29 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class CustomPatientBubble extends StatelessWidget {
+class CustomPatientBubble extends StatefulWidget {
   const CustomPatientBubble({super.key, required this.patient});
 
   final Patient patient;
 
   @override
+  State<CustomPatientBubble> createState() => _CustomPatientBubbleState();
+}
+
+class _CustomPatientBubbleState extends State<CustomPatientBubble> {
+  bool isTapped = false;
+  @override
   Widget build(BuildContext context) {
     return Material(
-      borderRadius: BorderRadius.circular(16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: isTapped
+              ? AppColors.primary.withAlpha(100)
+              : AppColors.grey.withAlpha(50),
+          width: 0.5,
+        ),
+      ),
       color: Colors.white,
       child: Ink(
         decoration: BoxDecoration(
@@ -115,14 +153,27 @@ class CustomPatientBubble extends StatelessWidget {
         ),
         child: InkWell(
           splashColor: AppColors.primary.withAlpha(25),
+          highlightColor: AppColors.primary.withAlpha(25),
           borderRadius: BorderRadius.circular(12),
           onTap: () async {
-            var history = await getPatientHistory(patientId: patient.patientId);
-            if(!context.mounted) return;
+            setState(() {
+              isTapped = true;
+            });
+
+            var history = await getPatientHistory(
+              patientId: widget.patient.patientId,
+            );
+            if (!context.mounted) return;
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => PatientDataScreen(history: history,)),
+              MaterialPageRoute(
+                builder: (_) => PatientDataScreen(history: history!),
+              ),
             );
+
+            setState(() {
+              isTapped = false;
+            });
           },
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -130,18 +181,21 @@ class CustomPatientBubble extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    CustomNameInitial(gender: patient.gender ?? "", name: patient.name),
+                    CustomNameInitial(
+                      gender: widget.patient.gender ?? "",
+                      name: widget.patient.name,
+                    ),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: RichText(
                           text: TextSpan(
-                            text: patient.name,
+                            text: widget.patient.name,
                             style: Theme.of(context).textTheme.bodyLarge,
                             children: [
                               TextSpan(
                                 text:
-                                    "\n${patient.age} Yrs · ${patient.gender??""}",
+                                    "\n${widget.patient.age} Yrs · ${widget.patient.gender ?? ""}",
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -149,21 +203,30 @@ class CustomPatientBubble extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Icon(
-                      Icons.keyboard_arrow_right_rounded,
-                      color: AppColors.grey,
-                    ),
+                    isTapped
+                        ? SizedBox(
+                            width: 15,
+                            height: 15,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : Icon(
+                            Icons.keyboard_arrow_right_rounded,
+                            color: AppColors.grey,
+                          ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    GenderLabel(patient: patient),
+                    GenderLabel(patient: widget.patient),
                     Expanded(child: SizedBox()),
                     Text(
                       DateFormat(
                         'd MMM yy',
-                      ).format(DateTime.parse(patient.createdAt!)),
+                      ).format(DateTime.parse(widget.patient.createdAt!)),
                     ),
                   ],
                 ),
@@ -182,37 +245,38 @@ class GenderLabel extends StatelessWidget {
   final Patient patient;
   @override
   Widget build(BuildContext context) {
-      if(patient.gender != null) {return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          width: 1,
+    if (patient.gender != null) {
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            width: 1,
+            color: patient.gender == "Male"
+                ? AppColors.primaryMale
+                : patient.gender == "Female"
+                ? AppColors.primaryFemale
+                : AppColors.primaryOther,
+          ),
           color: patient.gender == "Male"
-              ? AppColors.primaryMale
+              ? AppColors.secondaryMale
               : patient.gender == "Female"
-              ? AppColors.primaryFemale
-              : AppColors.primaryOther,
+              ? AppColors.secondaryFemale
+              : AppColors.secondaryOther,
         ),
-        color: patient.gender == "Male"
-            ? AppColors.secondaryMale
-            : patient.gender == "Female"
-            ? AppColors.secondaryFemale
-            : AppColors.secondaryOther,
-      ),
-      child: Text(
-        patient.gender ?? "",
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: patient.gender == "Male"
-              ? AppColors.primaryMale
-              : patient.gender == "Female"
-              ? AppColors.primaryFemale
-              : AppColors.primaryOther,
+        child: Text(
+          patient.gender ?? "",
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: patient.gender == "Male"
+                ? AppColors.primaryMale
+                : patient.gender == "Female"
+                ? AppColors.primaryFemale
+                : AppColors.primaryOther,
+          ),
         ),
-      ),
-    );}
-      else{
-        return Container();
-      }
+      );
+    } else {
+      return Container();
+    }
   }
 }
