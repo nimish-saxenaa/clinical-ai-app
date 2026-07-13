@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../Screens/login_screen.dart';
+import '../../Screens/Authentication/login_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../Models/consultation_models.dart';
+import '../../Models/consultation_models.dart';
 import 'dart:typed_data';
 
 /// POST /api/v1/consultation/start
@@ -10,7 +10,6 @@ import 'dart:typed_data';
 ///
 String baseUrl = "https://med-history-agent.decrackle.io";
 Future<StartConsultationResponse> startConsultation({
-  required String baseUrl,
   required String token,
   required String specialty,
   String? patientLanguage,
@@ -18,7 +17,7 @@ Future<StartConsultationResponse> startConsultation({
   int? patientAge,
   String? patientGender,
   String? chiefComplaint,
-  String? patientId,
+  required String patientId,
 }) async {
   Uri url = Uri.parse("$baseUrl/api/v1/consultation/start");
   final response = await http.post(
@@ -34,7 +33,7 @@ Future<StartConsultationResponse> startConsultation({
       "patient_age": ?patientAge,
       "patient_gender": ?patientGender,
       "chief_complaint": ?chiefComplaint,
-      "patient_id": ?patientId,
+      "patient_id": patientId,
     }),
   );
   return StartConsultationResponse.fromJson(jsonDecode(response.body));
@@ -102,6 +101,7 @@ Future<QaLogResponse> getQaLog({
     url,
     headers: {"Authorization": "Bearer $token"},
   );
+
   return QaLogResponse.fromJson(jsonDecode(response.body));
 }
 
@@ -126,7 +126,7 @@ Future<EditAnswerResponse> editAnswer({
 }
 
 /// POST /api/v1/consultation/{session_id}/prescribe
-Future<PrescribeResponse> prescribe({
+Future<Prescription> prescribe({
   required String token,
   required String sessionId,
   required String confirmedDiagnosis,
@@ -140,12 +140,13 @@ Future<PrescribeResponse> prescribe({
     },
     body: jsonEncode({"confirmed_diagnosis": confirmedDiagnosis}),
   );
-  return PrescribeResponse.fromJson(jsonDecode(response.body));
+  print(response.body);
+  return Prescription.fromJson(jsonDecode(response.body)['prescription']);
 }
 
 /// POST /api/v1/consultation/{session_id}/finalize
 /// No body. Returns the full ConsultationContext object.
-Future<ConsultationContext> finalizeConsultation({
+Future<void> finalizeConsultation({
   required String token,
   required String sessionId,
 }) async {
@@ -154,7 +155,6 @@ Future<ConsultationContext> finalizeConsultation({
     url,
     headers: {"Authorization": "Bearer $token"},
   );
-  return ConsultationContext.fromJson(jsonDecode(response.body));
 }
 
 /// POST /api/v1/consultation/{session_id}/override

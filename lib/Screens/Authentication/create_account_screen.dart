@@ -1,18 +1,18 @@
-import 'package:clinical_ai_app/Screens/login_screen.dart';
-import 'package:clinical_ai_app/Services/auth_service.dart';
+import 'package:clinical_ai_app/Screens/Authentication/login_screen.dart';
+import 'package:clinical_ai_app/Services/Authentication/auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../Custom Widgets/CustomAlertDialog.dart';
-import '../Custom Widgets/custom_button.dart';
-import '../Custom Widgets/custom_text_field.dart';
-import '../Custom Widgets/logo_text.dart';
-import '../Models/patient_list_model.dart';
-import '../Services/navigation_service.dart';
-import '../Services/patient_service.dart';
-import '../access_token.dart';
-import '../colors.dart';
-import 'home_screen.dart';
+import '../../Custom Widgets/CustomAlertDialog.dart';
+import '../../Custom Widgets/custom_button.dart';
+import '../../Custom Widgets/custom_text_field.dart';
+import '../../Custom Widgets/logo_text.dart';
+import '../../Models/patient_list_model.dart';
+import '../../Services/Authentication/navigation_service.dart';
+import '../../Services/PatientData/patient_service.dart';
+import '../../Services/Authentication/access_token.dart';
+import '../../Components/colors.dart';
+import '../PatientData/home_screen.dart';
 import 'package:provider/provider.dart';
 
 class CreateAccountScreen extends StatefulWidget {

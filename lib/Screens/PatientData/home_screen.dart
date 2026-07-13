@@ -1,29 +1,53 @@
 import 'package:clinical_ai_app/Custom%20Widgets/custom_confirmation_alert.dart';
-import 'package:clinical_ai_app/Custom%20Widgets/custom_name_initial.dart';
 import 'package:clinical_ai_app/Models/patient_list_model.dart';
 import 'package:clinical_ai_app/Models/patient_model.dart';
-import 'package:clinical_ai_app/Screens/patient_data_screen.dart';
-import 'package:clinical_ai_app/colors.dart';
+import 'package:clinical_ai_app/Screens/PatientData/patient_data_screen.dart';
+import 'package:clinical_ai_app/Components/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../Custom Widgets/new_patient_form.dart';
-import '../Services/auth_service.dart';
-import '../Services/navigation_service.dart';
-import '../Services/patient_service.dart';
-import '../access_token.dart';
-import '../functions.dart';
+import '../../Custom Widgets/Patients/custom_name_initial.dart';
+import '../../Custom Widgets/Patients/new_patient_form.dart';
+import '../../Services/Authentication/navigation_service.dart';
+import '../../Services/PatientData/patient_service.dart';
+import '../../Services/Authentication/access_token.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   static const routeName = "/home";
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController searchController = TextEditingController();
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+  }
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    searchController.clear();
+    searchController.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final patientsProvider = context.watch<PatientListProvider>();
     final List<Patient> patientList = patientsProvider.patients!;
+    List<Patient> filteredPatientList = patientList
+        .where(
+          (patient) => patient.name.toLowerCase().contains(
+            searchController.text.trim().toLowerCase(),
+          ),
+        )
+        .toList();
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
@@ -79,20 +103,27 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: searchController,
+              onChanged: (value) {
+                setState(() {});
+              },
               decoration: InputDecoration(
                 fillColor: Colors.white,
                 filled: true,
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.grey,
-                ),
+                prefixIcon: Icon(Icons.search, color: AppColors.grey),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: AppColors.grey.withAlpha(50), width: 0.3),
+                  borderSide: BorderSide(
+                    color: AppColors.grey.withAlpha(50),
+                    width: 0.3,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: AppColors.grey.withAlpha(50), width: 0.3),
+                  borderSide: BorderSide(
+                    color: AppColors.grey.withAlpha(50),
+                    width: 0.3,
+                  ),
                 ),
                 hintText: "Search Patients...",
                 hintStyle: Theme.of(
@@ -101,20 +132,28 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: patientList.length,
-                itemBuilder: (context, index) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CustomPatientBubble(patient: patientList[index]),
-                      const SizedBox(height: 16),
-                    ],
-                  );
-                },
-              ),
-            ),
+            filteredPatientList.isNotEmpty
+                ? Expanded(
+                    child: ListView.builder(
+                      itemCount: filteredPatientList.length,
+                      itemBuilder: (context, index) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CustomPatientBubble(
+                              patient: filteredPatientList[index],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      },
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      "No Patients found with '${searchController.text}'",
+                    ),
+                  ),
           ],
         ),
       ),
@@ -167,7 +206,7 @@ class _CustomPatientBubbleState extends State<CustomPatientBubble> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => PatientDataScreen(history: history!),
+                builder: (_) => PatientDataScreen(patientHistory: history,),
               ),
             );
 
@@ -182,7 +221,6 @@ class _CustomPatientBubbleState extends State<CustomPatientBubble> {
                 Row(
                   children: [
                     CustomNameInitial(
-                      gender: widget.patient.gender ?? "",
                       name: widget.patient.name,
                     ),
                     Expanded(
@@ -240,43 +278,54 @@ class _CustomPatientBubbleState extends State<CustomPatientBubble> {
 }
 
 class GenderLabel extends StatelessWidget {
-  const GenderLabel({super.key, required this.patient});
+  const GenderLabel({
+    super.key,
+    required this.patient,
+  });
 
   final Patient patient;
+
   @override
   Widget build(BuildContext context) {
-    if (patient.gender != null) {
-      return Container(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            width: 1,
-            color: patient.gender == "Male"
-                ? AppColors.primaryMale
-                : patient.gender == "Female"
-                ? AppColors.primaryFemale
-                : AppColors.primaryOther,
-          ),
-          color: patient.gender == "Male"
-              ? AppColors.secondaryMale
-              : patient.gender == "Female"
-              ? AppColors.secondaryFemale
-              : AppColors.secondaryOther,
-        ),
-        child: Text(
-          patient.gender ?? "",
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: patient.gender == "Male"
-                ? AppColors.primaryMale
-                : patient.gender == "Female"
-                ? AppColors.primaryFemale
-                : AppColors.primaryOther,
-          ),
-        ),
-      );
-    } else {
-      return Container();
+    if (patient.gender == null) {
+      return const SizedBox.shrink();
     }
+
+    final Color primaryColor;
+    final Color secondaryColor;
+
+    switch (patient.gender) {
+      case "Male":
+        primaryColor = AppColors.primaryMale;
+        secondaryColor = AppColors.secondaryMale;
+        break;
+
+      case "Female":
+        primaryColor = AppColors.primaryFemale;
+        secondaryColor = AppColors.secondaryFemale;
+        break;
+
+      default:
+        primaryColor = AppColors.primaryOther;
+        secondaryColor = AppColors.secondaryOther;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: secondaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          width: 1,
+          color: primaryColor,
+        ),
+      ),
+      child: Text(
+        patient.gender!,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: primaryColor,
+        ),
+      ),
+    );
   }
 }

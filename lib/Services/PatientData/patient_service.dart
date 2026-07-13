@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:clinical_ai_app/Services/navigation_service.dart';
+import 'package:clinical_ai_app/Services/Authentication/navigation_service.dart';
 import 'package:http/http.dart' as http;
-import '../Models/patient_list_model.dart';
-import '../Models/patient_model.dart';
-import '../Models/patient_response_history_model.dart';
-import '../access_token.dart';
-import 'auth_service.dart';
+import '../../Models/patient_list_model.dart';
+import '../../Models/patient_model.dart';
+import '../../Models/patient_response_history_model.dart';
+import '../Authentication/access_token.dart';
+import '../Authentication/auth_service.dart';
 
 String baseUrl = "https://med-history-agent.decrackle.io";
 

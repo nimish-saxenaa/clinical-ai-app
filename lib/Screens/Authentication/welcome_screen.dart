@@ -1,8 +1,8 @@
-import 'package:clinical_ai_app/Screens/login_screen.dart';
+import 'package:clinical_ai_app/Screens/Authentication/login_screen.dart';
 import 'package:flutter/material.dart';
 
-import '../Custom Widgets/custom_button.dart';
-import '../Custom Widgets/logo_text.dart';
+import '../../Custom Widgets/custom_button.dart';
+import '../../Custom Widgets/logo_text.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});

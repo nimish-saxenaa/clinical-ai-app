@@ -123,31 +123,11 @@ class SubmitAnswerResponse {
 /// ---------------------------------------------------------------------
 /// GET /api/v1/consultation/{session_id}/qa-log
 /// ---------------------------------------------------------------------
-class QaLogEntry {
-  final String questionId;
-  final String? questionText;
-  final String? answer;
 
-  QaLogEntry({required this.questionId, this.questionText, this.answer});
-
-  factory QaLogEntry.fromJson(Map<String, dynamic> json) {
-    return QaLogEntry(
-      questionId: (json['question_id'] ?? '').toString(),
-      questionText: json['question_text'],
-      answer: json['answer'],
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'question_id': questionId,
-        'question_text': questionText,
-        'answer': answer,
-      };
-}
 
 class QaLogResponse {
-  final List<QaLogEntry> qaLog;
-  final List<String> flags;
+  final List<Map<String,dynamic>> qaLog;
+  final List<Map<String,dynamic>> flags;
   final String? rawTranscript;
   final String? translatedTranscript;
 
@@ -160,17 +140,23 @@ class QaLogResponse {
 
   factory QaLogResponse.fromJson(Map<String, dynamic> json) {
     return QaLogResponse(
-      qaLog: (json['qa_log'] as List<dynamic>? ?? [])
-          .map((e) => QaLogEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      flags: (json['flags'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(),
-      rawTranscript: json['raw_transcript'],
-      translatedTranscript: json['translated_transcript'],
+      qaLog: List<Map<String, dynamic>>.from(
+        (json['qa_log'] as List).map(
+              (e) => Map<String, dynamic>.from(e),
+        ),
+      ),
+      flags: List<Map<String, dynamic>>.from(
+        (json['flags'] as List).map(
+              (e) => Map<String, dynamic>.from(e),
+        ),
+      ),
+      rawTranscript: json['raw_transcript'] as String?,
+      translatedTranscript: json['translated_transcript'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'qa_log': qaLog.map((e) => e.toJson()).toList(),
+        'qa_log': qaLog,
         'flags': flags,
         'raw_transcript': rawTranscript,
         'translated_transcript': translatedTranscript,
@@ -196,16 +182,104 @@ class EditAnswerResponse {
 /// POST /api/v1/consultation/{session_id}/prescribe
 /// Shape of "prescription" is not yet specified by the API, kept raw.
 /// ---------------------------------------------------------------------
-class PrescribeResponse {
-  final dynamic prescription;
+class Prescription {
+  final List<Medication> pharmacological;
+  final List<String> nonPharmacological;
+  final String? followUp;
+  final List<String> referrals;
+  final List<String> contraindicationWarnings;
+  
 
-  PrescribeResponse({this.prescription});
+  Prescription({
+    required this.pharmacological,
+    required this.nonPharmacological,
+    this.followUp,
+    required this.referrals,
+    required this.contraindicationWarnings,
+  });
 
-  factory PrescribeResponse.fromJson(Map<String, dynamic> json) {
-    return PrescribeResponse(prescription: json['prescription']);
+  factory Prescription.fromJson(Map<String, dynamic>? json) {
+    json ??= {};
+
+    return Prescription(
+      pharmacological: (json['pharmacological'] as List<dynamic>? ?? [])
+          .map((e) => Medication.fromJson(e as Map<String, dynamic>))
+          .toList(),
+
+      nonPharmacological:
+      (json['non_pharmacological'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+
+      followUp: json['follow_up']?.toString(),
+
+      referrals: (json['referrals'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+
+      contraindicationWarnings:
+      (json['contraindication_warnings'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+    );
   }
 
-  Map<String, dynamic> toJson() => {'prescription': prescription};
+  Map<String, dynamic> toJson() => {
+    'pharmacological':
+    pharmacological.map((e) => e.toJson()).toList(),
+    'non_pharmacological': nonPharmacological,
+    'follow_up': followUp,
+    'referrals': referrals,
+    'contraindication_warnings': contraindicationWarnings,
+  };
+
+  @override
+  String toString() =>
+      'Prescription(medications: ${pharmacological.length}, referrals: ${referrals.length})';
+}
+
+class Medication {
+  final String drugName;
+  final String? dose;
+  final String? frequency;
+  final String? duration;
+  final String? instructions;
+  final String? warnings;
+
+  Medication({
+    required this.drugName,
+    this.dose,
+    this.frequency,
+    this.duration,
+    this.instructions,
+    this.warnings,
+  });
+
+  factory Medication.fromJson(Map<String, dynamic>? json) {
+    json ??= {};
+
+    return Medication(
+      drugName: json['drug_name']?.toString() ?? '',
+      dose: json['dose']?.toString(),
+      frequency: json['frequency']?.toString(),
+      duration: json['duration']?.toString(),
+      instructions: json['instructions']?.toString(),
+      warnings: json['warnings']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'drug_name': drugName,
+    'dose': dose,
+    'frequency': frequency,
+    'duration': duration,
+    'instructions': instructions,
+    'warnings': warnings,
+  };
+
+  @override
+  String toString() =>
+      'Medication(drugName: $drugName, dose: $dose)';
 }
 
 /// ---------------------------------------------------------------------
@@ -216,8 +290,8 @@ class ConsultationContext {
   final String sessionId;
   final String? specialty;
   final String? stage;
-  final List<QaLogEntry> qaLog;
-  final List<String> flags;
+  final List<Map<String, dynamic>> qaLog;
+  final List<Map<String, dynamic>> flags;
   final SessionSummary? summary;
   final Diagnosis? diagnosis;
   final dynamic prescription; // raw, shape not yet specified
@@ -242,10 +316,8 @@ class ConsultationContext {
       sessionId: (json['session_id'] ?? '').toString(),
       specialty: json['specialty'],
       stage: json['stage'],
-      qaLog: (json['qa_log'] as List<dynamic>? ?? [])
-          .map((e) => QaLogEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      flags: (json['flags'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(),
+      qaLog: (json['qa_log'] as List<Map<String, dynamic>>? ?? []),
+      flags: (json['flags'] as List<Map<String, dynamic>>? ?? []),
       summary: json['summary'] != null
           ? SessionSummary.fromJson(json['summary'] as Map<String, dynamic>)
           : null,
@@ -297,3 +369,6 @@ class DeleteConsultationResponse {
 
   Map<String, dynamic> toJson() => {'deleted': deleted};
 }
+
+
+

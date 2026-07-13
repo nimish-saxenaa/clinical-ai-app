@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// A single parsed Server-Sent-Event: `event: <name>` + `data: <json/text>`.
 String baseUrl = "https://med-history-agent.decrackle.io";
+String base = "med-history-agent.decrackle.io";
 class SseEvent {
   final String event;
   final dynamic data; // decoded JSON if possible, otherwise raw string
@@ -71,31 +72,39 @@ Stream<SseEvent> consultationPipeline({
   final uri = Uri.parse(
     "$baseUrl/api/v1/consultation/$sessionId/pipeline?token=$accessToken",
   );
-  final request = http.Request("GET", uri);
-  final streamedResponse = await http.Client().send(request);
 
-  String? currentEvent;
+  final request = http.Request("GET", uri);
+  final response = await http.Client().send(request);
+
   final buffer = StringBuffer();
 
-  await for (final line in streamedResponse.stream
+  await for (final line in response.stream
       .transform(utf8.decoder)
       .transform(const LineSplitter())) {
-    if (line.startsWith("event:")) {
-      currentEvent = line.substring(6).trim();
-    } else if (line.startsWith("data:")) {
+    // Ignore keepalive comments
+    if (line.startsWith(":")) continue;
+
+    if (line.startsWith("data:")) {
       buffer.write(line.substring(5).trim());
-    } else if (line.isEmpty) {
-      if (currentEvent != null && buffer.isNotEmpty) {
-        final raw = buffer.toString();
-        dynamic decoded;
-        try {
-          decoded = jsonDecode(raw);
-        } catch (_) {
-          decoded = raw;
-        }
-        yield SseEvent(event: currentEvent, data: decoded);
+    }
+
+    // Empty line = end of one SSE event
+    if (line.isEmpty) {
+      if (buffer.isEmpty) continue;
+
+      final raw = buffer.toString();
+
+      try {
+        final json = jsonDecode(raw) as Map<String, dynamic>;
+
+        yield SseEvent(
+          event: json["event"] as String,
+          data: json,
+        );
+      } catch (_) {
+        // Ignore malformed events
       }
-      currentEvent = null;
+
       buffer.clear();
     }
   }
@@ -139,7 +148,7 @@ class VoiceStreamConnection {
   }) {
     final scheme = secure ? "wss" : "ws";
     final uri = Uri.parse(
-      "$scheme://$baseUrl/api/v1/consultation/$sessionId/voice-stream?token=$accessToken",
+      "$scheme://$base/api/v1/consultation/$sessionId/voice-stream?token=$accessToken",
     );
     final channel = WebSocketChannel.connect(uri);
 
@@ -163,7 +172,7 @@ class VoiceStreamConnection {
   }
 
   /// Signals the server that audio is finished; alternatively just close().
-  void stop() {
+  void stopRecording() {
     _channel.sink.add(jsonEncode({"type": "stop"}));
   }
 

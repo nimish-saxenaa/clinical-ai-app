@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../colors.dart';
+import '../../Components/colors.dart';
 
 /// ---------- Data models ----------
 
@@ -50,7 +50,8 @@ class DiagnosisCard extends StatefulWidget {
     required this.diagnoses,
     required this.workup,
     required this.subjective,
-    required this.objective, required this.show,
+    required this.objective,
+    required this.show,
   });
 
   @override
@@ -81,9 +82,33 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
     return '${d.day} ${months[d.month - 1]} ${d.year}, '
         '${hour12.toString().padLeft(2, '0')}:$minute $period';
   }
+ late Color primaryColor;
+  late Color lightColor;
+
+
 
   @override
   Widget build(BuildContext context) {
+    switch (widget.status) {
+      case "Diagnosed":
+        primaryColor = AppColors.diagnosedPrimary;
+        lightColor = AppColors.diagnosedLight;
+        break;
+
+      case "In Progress":
+        primaryColor = AppColors.progressPrimary;
+        lightColor = AppColors.progressLight;
+        break;
+    case "Finalized":
+      primaryColor = AppColors.finalizedPrimary;
+      lightColor = AppColors.finalizedLight;
+      case "Prescribed":
+        primaryColor = AppColors.prescribedPrimary;
+        lightColor = AppColors.prescribedLight;
+      default:
+        primaryColor = AppColors.grey;
+        lightColor = AppColors.greyLight;
+    }
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -121,19 +146,25 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: widget.status == "Diagnosed" ? AppColors.diagnosedLight : widget.status == "In Progress" ? AppColors.progressLight : AppColors.finalizedLight,
+                                  color: lightColor,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     width: 0.75,
-                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : widget.status == "In Progress" ? AppColors.progressPrimary : AppColors.finalizedPrimary,
-                                ),),
+                                    color: primaryColor,
+                                  ),
+                                ),
                                 child: Text(
                                   widget.status,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: widget.status == "Diagnosed" ? AppColors.diagnosedPrimary : widget.status == "In Progress" ? AppColors.progressPrimary : AppColors.finalizedPrimary,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(
+                                        color: primaryColor,
+                                    fontWeight: FontWeight.w600
+                                      ),
                                 ),
                               ),
                             ],
@@ -186,22 +217,28 @@ class _DiagnosisCardState extends State<DiagnosisCard> {
               ),
             ),
           ),
-          if(_expanded && widget.show) _ExpandedBody(
-            redFlags: widget.redFlags,
-            diagnoses: widget.diagnoses,
-            workup: widget.workup,
-            subjective: widget.subjective,
-            objective: widget.objective, show: widget.show,
-          ),
-          if(_expanded && !widget.show) Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF9FAFB), // gray-50/60 approximation
-              border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+          if (_expanded && widget.show)
+            _ExpandedBody(
+              redFlags: widget.redFlags,
+              diagnoses: widget.diagnoses,
+              workup: widget.workup,
+              subjective: widget.subjective,
+              objective: widget.objective,
+              show: widget.show,
             ),
-            padding: const EdgeInsets.all(20.0),
-            child: Text("No diagnosis recorded yet.", style: Theme.of(context).textTheme.bodyMedium,),
-          ),
+          if (_expanded && !widget.show)
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF9FAFB), // gray-50/60 approximation
+                border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+              ),
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                "No diagnosis recorded yet.",
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
         ],
       ),
     );
@@ -225,19 +262,20 @@ class _ExpandedBody extends StatelessWidget {
     required this.diagnoses,
     required this.workup,
     required this.subjective,
-    required this.objective, required this.show,
+    required this.objective,
+    required this.show,
   });
 
   @override
   Widget build(BuildContext context) {
-    return  Container(
+    return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Color(0xFFF9FAFB), // gray-50/60 approximation
         border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child:  Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionLabel('Diagnosis'),
@@ -278,7 +316,7 @@ class _ExpandedBody extends StatelessWidget {
           _SoapSection(letter: 'O', title: 'Objective', fields: objective),
         ],
       ),
-    ) ;
+    );
   }
 }
 
@@ -459,16 +497,14 @@ class _SoapSection extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            (f.value == null )
-                                ? 'Not recorded'
-                                : f.value!,
+                            (f.value == null) ? 'Not recorded' : f.value!,
                             style: TextStyle(
-                              color: (f.value == null )
+                              color: (f.value == null)
                                   ? const Color(0xFFD1D5DB)
                                   : const Color(0xFF374151),
                               fontSize: 12,
                               height: 1.5,
-                              fontStyle: (f.value == null )
+                              fontStyle: (f.value == null)
                                   ? FontStyle.italic
                                   : FontStyle.normal,
                             ),

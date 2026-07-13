@@ -1,19 +1,19 @@
-import 'package:clinical_ai_app/Screens/create_account_screen.dart';
-import 'package:clinical_ai_app/Screens/home_screen.dart';
-import 'package:clinical_ai_app/Services/auth_service.dart';
-import 'package:clinical_ai_app/Services/navigation_service.dart';
-import 'package:clinical_ai_app/Services/patient_service.dart';
-import 'package:clinical_ai_app/access_token.dart';
+import 'package:clinical_ai_app/Screens/Authentication/create_account_screen.dart';
+import 'package:clinical_ai_app/Screens/PatientData/home_screen.dart';
+import 'package:clinical_ai_app/Services/Authentication/auth_service.dart';
+import 'package:clinical_ai_app/Services/Authentication/navigation_service.dart';
+import 'package:clinical_ai_app/Services/PatientData/patient_service.dart';
+import 'package:clinical_ai_app/Services/Authentication/access_token.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../Custom Widgets/CustomAlertDialog.dart';
-import '../Custom Widgets/custom_button.dart';
-import '../Custom Widgets/custom_text_field.dart';
-import '../Custom Widgets/logo_text.dart';
-import '../Models/patient_list_model.dart';
-import '../colors.dart';
+import '../../Custom Widgets/CustomAlertDialog.dart';
+import '../../Custom Widgets/custom_button.dart';
+import '../../Custom Widgets/custom_text_field.dart';
+import '../../Custom Widgets/logo_text.dart';
+import '../../Models/patient_list_model.dart';
+import '../../Components/colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

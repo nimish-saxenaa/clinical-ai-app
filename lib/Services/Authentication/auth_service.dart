@@ -1,8 +1,8 @@
-import 'package:clinical_ai_app/Services/patient_service.dart';
+import 'package:clinical_ai_app/Services/PatientData/patient_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import '../access_token.dart';
+import 'access_token.dart';
 
 String baseUrl = "https://med-history-agent.decrackle.io";
 

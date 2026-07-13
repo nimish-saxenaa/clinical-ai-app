@@ -16,7 +16,7 @@ class AppColors {
   static const secondaryFemale = Color(0xFFfdf2f8);
   static const primaryOther = Color(0xFF9333ea);
   static const secondaryOther = Color(0xFFfaf5ff);
-  static const success = Color(0xFF22C55E);
+  static const success = Color(0xFF10B981);
   static const error = Color(0xFFEF4444);
   static const warning = Color(0xFFF59E0B);
   static const diagnosedPrimary = Color(0xFF7c3aed);
@@ -25,4 +25,6 @@ class AppColors {
   static const progressLight = Color(0xFFfffbeb);
   static const finalizedPrimary = Color(0xFF047857);
   static const finalizedLight = Color(0xFFecfdf5);
+  static const prescribedPrimary = Color(0xFF0d9488);
+  static const prescribedLight = Color(0xFFf0fdfa);
 }

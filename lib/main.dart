@@ -1,16 +1,17 @@
-import 'package:clinical_ai_app/Screens/login_screen.dart';
+import 'package:clinical_ai_app/Screens/Authentication/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'Components/app_theme.dart';
 import 'Models/patient_list_model.dart';
-import 'Screens/create_account_screen.dart';
-import 'Screens/history_taking_screen.dart';
-import 'Screens/home_screen.dart';
-import 'Screens/welcome_screen.dart';
-import 'Services/auth_service.dart';
-import 'Services/navigation_service.dart';
-import 'Services/patient_service.dart';
-import 'access_token.dart';
-import 'app_theme.dart';
+import 'Screens/Authentication/create_account_screen.dart';
+import 'Screens/PatientData/home_screen.dart';
+import 'Screens/Consultation/review_responses_screen.dart';
+import 'Screens/Authentication/welcome_screen.dart';
+import 'Services/Authentication/auth_service.dart';
+import 'Services/Authentication/navigation_service.dart';
+import 'Services/PatientData/patient_service.dart';
+import 'Services/Authentication/access_token.dart';
+import 'test_screen.dart';
 
 void main() {
   runApp(ChangeNotifierProvider(
@@ -35,6 +36,8 @@ class MyApp extends StatelessWidget {
         HomeScreen.routeName: (context) => HomeScreen(),
         WelcomeScreen.routeName: (context) => WelcomeScreen(),
         AuthGate.routeName: (context) => AuthGate(),
+        ReviewResponsesScreen.routeName: (context) => ReviewResponsesScreen(token: '', sessionId: '',),
+        //TestScreen.routeName: (context) => TestScreen(),
       },
     );
   }

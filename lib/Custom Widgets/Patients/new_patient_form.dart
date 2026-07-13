@@ -1,9 +1,9 @@
 import 'package:clinical_ai_app/Custom%20Widgets/custom_button.dart';
-import 'package:clinical_ai_app/colors.dart';
+import 'package:clinical_ai_app/Components/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../Models/patient_list_model.dart';
-import '../Services/patient_service.dart';
+import '../../Models/patient_list_model.dart';
+import '../../Services/PatientData/patient_service.dart';
 
 /// Full "New Patient" sheet/dialog: header + form.
 /// Wrap in a Dialog / showModalBottomSheet / Card as needed.

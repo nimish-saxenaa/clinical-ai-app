@@ -46,7 +46,20 @@ String getDiagnosisStatus(String status) {
     "diagnosis": "Diagnosed",
     "questionnaire": "In Progress",
     "finalized": "Finalized",
+    "prescription": "Prescribed",
   };
 
   return statuses[status] ?? status;
+}
+
+String formatKey(String key) {
+  return key
+      .replaceAll("_", " ")
+      .split(" ")
+      .map(
+        (e) => e.isEmpty
+        ? e
+        : "${e[0].toUpperCase()}${e.substring(1).toLowerCase()}",
+  )
+      .join(" ");
 }
