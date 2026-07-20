@@ -41,7 +41,15 @@ class HistoryTakingScreen extends StatefulWidget {
 class _HistoryTakingScreenState extends State<HistoryTakingScreen>
     with TickerProviderStateMixin {
   AudioRecorder recorder = AudioRecorder();
-  final recordConfig = RecordConfig(encoder: AudioEncoder.pcm16bits);
+  // Using AAC-LC (best for iOS & Android streaming)
+  // Backend supports: audio/aac, audio/wav, audio/mp4
+  final recordConfig = RecordConfig(
+    encoder: AudioEncoder.aacLc,
+    // Optional: customize if needed
+    // sampleRate: 16000,     // 16kHz for speech (lower bandwidth)
+    // bitRate: 128000,       // 128 kbps
+    // numChannels: 1,        // Mono
+  );
   VoiceStreamConnection? connection;
   QnaState qnaState = QnaState.idle;
   TextToSpeechState state = TextToSpeechState.idle;
@@ -195,89 +203,151 @@ class _HistoryTakingScreenState extends State<HistoryTakingScreen>
   }
 
   Future<void> startVoiceStreaming() async {
+    print("🎙️ [DEBUG] Starting voice streaming...");
     await _audioPlayer.stop();
     setState(() {
       voiceStreamState = VoiceStreamState.connecting;
     });
+
     String? accessToken = await AccessTokenService.getToken();
+    print("🔑 [DEBUG] Access token: ${accessToken?.substring(0, 20)}...");
+    print("📝 [DEBUG] Session ID: ${widget.sessionId}");
+
     connection = VoiceStreamConnection.connect(
       sessionId: widget.sessionId,
       accessToken: accessToken!,
     );
-    connection?.start();
-    connection?.messages.listen((event) async {
-      if (event.type == "ready") {
-        if (await recorder.hasPermission()) {
-          final stream = await recorder.startStream(recordConfig);
+    print("🔌 [DEBUG] WebSocket connection created");
+
+    // Backend Protocol: Send START first, THEN wait for READY
+    print("📤 [DEBUG] Sending START message first (backend protocol)...");
+    await Future.delayed(Duration(milliseconds: 300)); // Give connection time
+    connection?.start(mimeType: "audio/aac");
+    print("✅ [DEBUG] Sent start message with MIME type: audio/aac");
+
+    // Now listen for messages
+    connection?.messages.listen(
+      (event) async {
+        print("📨 [DEBUG] Received event type: ${event.type}");
+        print("📦 [DEBUG] Event data: ${event.data}");
+
+        if (event.type == "ready") {
+          print("✅ [DEBUG] Server ready! Now starting audio recording...");
+
+          if (await recorder.hasPermission()) {
+            print("🎤 [DEBUG] Microphone permission granted");
+            final stream = await recorder.startStream(recordConfig);
+            print("🎵 [DEBUG] Audio stream started");
+
+            setState(() {
+              startRecordingTimer();
+              voiceStreamState = VoiceStreamState.recording;
+            });
+
+            int chunkCount = 0;
+            stream.listen((audioChunk) {
+              chunkCount++;
+              if (chunkCount % 10 == 0) {
+                print(
+                  "🔊 [DEBUG] Sent $chunkCount audio chunks (${audioChunk.length} bytes each)",
+                );
+              }
+              connection?.sendAudioChunk(audioChunk);
+            });
+          } else {
+            print("❌ [DEBUG] Microphone permission denied");
+          }
+        }
+
+        if (event.type == "transcript") {
+          print("📝 [DEBUG] Transcript received, AI is thinking...");
           setState(() {
-            startRecordingTimer();
-            voiceStreamState = VoiceStreamState.recording;
+            voiceStreamState = VoiceStreamState.thinking;
           });
-          stream.listen((audioChunk) {
-            connection?.sendAudioChunk(audioChunk);
+        }
+
+        if (event.type == "done") {
+          print("✅ [DEBUG] Transcription complete");
+          await connection?.close();
+          print("🔌 [DEBUG] WebSocket closed");
+
+          if (event.data["next_question"] == null) {
+            print("🏁 [DEBUG] No more questions, navigating to review screen");
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ReviewResponsesScreen(
+                  token: accessToken,
+                  sessionId: widget.sessionId,
+                ),
+              ),
+            );
+            return;
+          }
+
+          print("❓ [DEBUG] Next question: ${event.data["next_question"]}");
+          print("🔊 [DEBUG] Playing next question audio...");
+          setState(() {
+            question = event.data["next_question"];
+            voiceStreamState = VoiceStreamState.inactive;
+          });
+
+          // Play the next question audio
+          playText(question: event.data["next_question"], token: accessToken);
+        }
+
+        if (event.type == "token") {
+          print("🔤 [DEBUG] Token received: ${event.data["text"]}");
+          setState(() {
+            question += event.data["text"];
+          });
+        }
+
+        if (event.type == "error") {
+          print("❌ [DEBUG] Error received: ${event.data["message"]}");
+          await connection?.close();
+          if (!mounted) return;
+          showCustomDialog(event.data["message"], context);
+          setState(() {
+            voiceStreamState = VoiceStreamState.inactive;
           });
         } else {
-          print("no permission");
+          print("ℹ️ [DEBUG] Other event data: ${event.data}");
         }
-      }
-      if (event.type == "transcript") {
-        setState(() {
-          voiceStreamState = VoiceStreamState.thinking;
-        });
-      }
-
-      if (event.type == "done") {
-        await connection?.close();
-        if (event.data["next_question"] == null) {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ReviewResponsesScreen(
-                token: accessToken,
-                sessionId: widget.sessionId,
-              ),
-            ),
-          );
-        }
-        setState(() {
-          question = event.data["next_question"];
-          voiceStreamState = VoiceStreamState.inactive;
-        });
-      }
-
-      if (event.type == "token") {
-        setState(() {
-          question += event.data["text"];
-        });
-      } if(event.type == "error"){
-        await connection?.close();
-        if (!mounted) return;
-        showCustomDialog(event.data["message"], context);
+      },
+      onError: (error) {
+        print("❌ [DEBUG] WebSocket error: $error");
         setState(() {
           voiceStreamState = VoiceStreamState.inactive;
         });
-      }
-      else {
-        print(event.data);
-      }
-    });
+      },
+      onDone: () {
+        print("🔌 [DEBUG] WebSocket stream closed");
+      },
+    );
   }
 
   Future<void> sendVoiceAnswer() async {
+    print("⏹️ [DEBUG] Stopping recording...");
     connection?.stopRecording();
+    print("📤 [DEBUG] Sent stop message to server");
     stopRecordingTimer();
     await recorder.stop();
+    print("🎤 [DEBUG] Audio recorder stopped");
     setState(() {
       voiceStreamState = VoiceStreamState.transcribing;
     });
+    print("⏳ [DEBUG] Waiting for transcription...");
   }
 
   Widget buildVoiceButton() {
     return ElevatedButton(
       onPressed: voiceStreamState == VoiceStreamState.inactive
           ? startVoiceStreaming
-          : voiceStreamState == VoiceStreamState.recording ? sendVoiceAnswer : null,
+          : voiceStreamState == VoiceStreamState.recording
+          ? sendVoiceAnswer
+          : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: _buttonBackgroundColor(),
         foregroundColor: _buttonForegroundColor(),
@@ -341,7 +411,7 @@ class _HistoryTakingScreenState extends State<HistoryTakingScreen>
         const SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator( strokeWidth: 1.5,),
+          child: CircularProgressIndicator(strokeWidth: 1.5),
         ),
         const SizedBox(width: 8),
         Text(text),
@@ -492,24 +562,28 @@ class _HistoryTakingScreenState extends State<HistoryTakingScreen>
                               children: [
                                 buildVoiceButton(),
                                 const SizedBox(width: 16),
-                                if(voiceStreamState == VoiceStreamState.recording)Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.red.shade200),
-                                  ),
-                                  child: Text(
-                                    formatRecordingTime(recordingDuration),
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontWeight: FontWeight.w600,
+                                if (voiceStreamState ==
+                                    VoiceStreamState.recording)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Colors.red.shade200,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      formatRecordingTime(recordingDuration),
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -945,8 +1019,6 @@ class RecordingContainer extends StatelessWidget {
               ),
 
               const SizedBox(width: 12),
-
-
             ],
           ),
 

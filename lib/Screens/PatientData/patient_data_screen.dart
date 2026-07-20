@@ -1,16 +1,22 @@
+import 'dart:convert';
+
 import 'package:clinical_ai_app/Custom%20Widgets/custom_button.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/custom_confirmation_alert.dart';
 import 'package:clinical_ai_app/Custom%20Widgets/Patients/diagnosis_card.dart';
 import 'package:clinical_ai_app/Services/Authentication/access_token.dart';
 import 'package:clinical_ai_app/functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:open_file/open_file.dart';
 
 import '../../Custom Widgets/Patients/custom_name_initial.dart';
 import '../../Models/patient_response_history_model.dart';
+import '../../Models/session_model.dart';
 import '../../Services/Consultation/consultation_functions.dart';
 import '../../Services/PatientData/patient_service.dart';
+import '../../Services/PDF/pdf_generator.dart';
 import '../../Components/colors.dart';
 import '../Consultation/new_consultation_screen.dart';
 
@@ -25,9 +31,175 @@ class PatientDataScreen extends StatefulWidget {
 
 class _PatientDataScreenState extends State<PatientDataScreen> {
   late var history = widget.patientHistory;
+  bool isDownloading = false;
+  String? downloadingSessionId; // Track which consultation is being downloaded
+
+  /// Show PDF saved notification
+  void _showPdfSavedNotification(String filePath) {
+    if (!mounted) return;
+
+    final fileName = filePath.split('/').last;
+    final savedIn = filePath.contains('/storage/emulated/0/Download')
+        ? 'Downloads folder'
+        : 'App storage';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'PDF saved',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 4),
+            Text(fileName, style: TextStyle(fontSize: 12)),
+            SizedBox(height: 2),
+            Text(
+              'Saved to: $savedIn',
+              style: TextStyle(fontSize: 10, color: Colors.white70),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 6),
+        action: SnackBarAction(
+          label: 'OPEN',
+          textColor: Colors.white,
+          onPressed: () => OpenFile.open(filePath),
+        ),
+      ),
+    );
+  }
+
+  /// Show a simple status message
+  void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error : Icons.check_circle,
+              color: Colors.white,
+              size: 20,
+            ),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Download SINGLE consultation report as PDF
+  Future<void> downloadConsultationReport(Session consultation) async {
+    setState(() {
+      isDownloading = true;
+      downloadingSessionId = consultation.sessionId;
+    });
+
+    try {
+      // Diagnostic: shows exactly what the history API returned for this
+      // session, so empty PDF sections can be traced to missing API data.
+      print('📄 Session payload for PDF: ${jsonEncode(consultation.toJson())}');
+
+      // Generate PDF for single consultation
+      final pdfFile = await PatientPdfGenerator.generateConsultationReport(
+        consultation: consultation,
+        patient: history.patient,
+      );
+
+      setState(() {
+        isDownloading = false;
+        downloadingSessionId = null;
+      });
+
+      print('✅ Consultation PDF saved: ${pdfFile.path}');
+      _showPdfSavedNotification(pdfFile.path);
+    } catch (e) {
+      setState(() {
+        isDownloading = false;
+        downloadingSessionId = null;
+      });
+
+      if (!mounted) return;
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('Error: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      print('❌ Error generating consultation PDF: $e');
+    }
+  }
+
+  /// Download patient report as PDF (ALL consultations)
+  Future<void> downloadPatientReport() async {
+    setState(() {
+      isDownloading = true;
+    });
+
+    try {
+      // Generate PDF
+      final pdfFile = await PatientPdfGenerator.generatePatientReport(
+        patientHistory: history,
+      );
+
+      setState(() {
+        isDownloading = false;
+      });
+
+      print('✅ Full patient report saved: ${pdfFile.path}');
+      _showPdfSavedNotification(pdfFile.path);
+    } catch (e) {
+      setState(() {
+        isDownloading = false;
+      });
+
+      if (!mounted) return;
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Error generating PDF: $e'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      print('❌ Error generating PDF: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -52,6 +224,19 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
           ],
         ),
         actions: [
+          // Download PDF Button
+          // IconButton(
+          //   onPressed: isDownloading ? null : downloadPatientReport,
+          //   icon: isDownloading
+          //       ? SizedBox(
+          //           width: 20,
+          //           height: 20,
+          //           child: CircularProgressIndicator(strokeWidth: 2),
+          //         )
+          //       : Icon(LucideIcons.download),
+          //   tooltip: 'Download Patient Report',
+          // ),
+          SizedBox(width: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Image.asset("assets/kuvaka_logo.png"),
@@ -72,10 +257,7 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CustomNameInitial(
-                        name: history.patient.name,
-                        size: 60,
-                      ),
+                      CustomNameInitial(name: history.patient.name, size: 60),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(left: 8.0),
@@ -136,7 +318,8 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                       builder: (_) => NewConsultationScreen(
                         patientName: history.patient.name,
                         patientAge: history.patient.age,
-                        patientGender: history.patient.gender ?? "", patientId: history.patient.patientId,
+                        patientGender: history.patient.gender ?? "",
+                        patientId: history.patient.patientId,
                       ),
                     ),
                   );
@@ -163,182 +346,262 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   ? Column(
                       children: List.generate(
                         history.sessions.length,
-                        (index) => GestureDetector(
-                          onLongPress: (){
-                            showCustomConfirmationAlert("Do you want to delete this consultation?", context, () async{
-                              String? token = await AccessTokenService.getToken();
-                              var res = await deleteConsultation(token: token!, sessionId: history.sessions[index].sessionId);
-                              print(res);
-                              var newHistory = await getPatientHistory(
-                                patientId: history.patient.patientId,
-                              );
-                              setState(() {
-                                history = newHistory;
-                              });
+                        (index) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Action icons - Download & Delete
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  // Download icon
+                                  IconButton(
+                                    onPressed:
+                                        downloadingSessionId ==
+                                            history.sessions[index].sessionId
+                                        ? null
+                                        : () => downloadConsultationReport(
+                                            history.sessions[index],
+                                          ),
+                                    icon:
+                                        downloadingSessionId ==
+                                            history.sessions[index].sessionId
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Icon(LucideIcons.download, size: 20),
+                                    tooltip: 'Download PDF',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary
+                                          .withOpacity(0.1),
+                                      foregroundColor: AppColors.primary,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  // Delete icon
+                                  IconButton(
+                                    onPressed: () {
+                                      showCustomConfirmationAlert(
+                                        "Do you want to delete this consultation?",
+                                        context,
+                                        () async {
+                                          // Close the confirmation dialog first
+                                          Navigator.pop(context);
 
-                              if(!context.mounted)return;
-                              Navigator.pop(context);
-                            });
-                          },
-                          child: DiagnosisCard(
-                            title: getSpecialtyName(
-                              history.sessions[index].specialty ?? "",
+                                          try {
+                                            String? token =
+                                                await AccessTokenService.getToken();
+                                            await deleteConsultation(
+                                              token: token!,
+                                              sessionId: history
+                                                  .sessions[index]
+                                                  .sessionId,
+                                            );
+
+                                            var newHistory =
+                                                await getPatientHistory(
+                                                  patientId:
+                                                      history.patient.patientId,
+                                                );
+                                            if (!mounted) return;
+                                            setState(() {
+                                              history = newHistory;
+                                            });
+
+                                            _showMessage(
+                                              'Consultation deleted successfully',
+                                            );
+                                          } catch (e) {
+                                            print(
+                                              '❌ Error deleting consultation: $e',
+                                            );
+                                            _showMessage(
+                                              'Failed to delete consultation',
+                                              isError: true,
+                                            );
+                                          }
+                                        },
+                                      );
+                                    },
+                                    icon: Icon(LucideIcons.trash2, size: 20),
+                                    tooltip: 'Delete',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.red.withOpacity(
+                                        0.1,
+                                      ),
+                                      foregroundColor: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            status: getDiagnosisStatus(
-                              history.sessions[index].currentStage ?? "",
-                            ),
-                            date: DateTime.parse(
-                              history.sessions[index].createdAt ??
-                                  DateTime.now().toString(),
-                            ),
-                            description:
-                                history.sessions[index].chiefComplaint ?? "",
-                            redFlags:
-                                history
-                                    .sessions[index]
-                                    .diagnosis
-                                    ?.urgentConcerns ??
-                                [],
-                            diagnoses: List.generate(
-                              (history
+                            // Diagnosis Card
+                            DiagnosisCard(
+                              title: getSpecialtyName(
+                                history.sessions[index].specialty ?? "",
+                              ),
+                              status: getDiagnosisStatus(
+                                history.sessions[index].currentStage ?? "",
+                              ),
+                              date: DateTime.parse(
+                                history.sessions[index].createdAt ??
+                                    DateTime.now().toString(),
+                              ),
+                              description:
+                                  history.sessions[index].chiefComplaint ?? "",
+                              redFlags:
+                                  history
+                                      .sessions[index]
+                                      .diagnosis
+                                      ?.urgentConcerns ??
+                                  [],
+                              diagnoses: List.generate(
+                                (history
+                                                .sessions[index]
+                                                .diagnosis
+                                                ?.differentialDiagnoses
+                                                .length ??
+                                            0) >
+                                        3
+                                    ? 3
+                                    : history
                                               .sessions[index]
                                               .diagnosis
                                               ?.differentialDiagnoses
                                               .length ??
-                                          0) >
-                                      3
-                                  ? 3
-                                  : history
-                                            .sessions[index]
-                                            .diagnosis
-                                            ?.differentialDiagnoses
-                                            .length ??
-                                        0,
-                              (diffDia) => DiagnosisItem(
-                                severity:
-                                    history
-                                        .sessions[index]
-                                        .diagnosis
-                                        ?.differentialDiagnoses[diffDia]
-                                        .likelihood ??
-                                    "",
-                                name:
-                                    history
-                                        .sessions[index]
-                                        .diagnosis
-                                        ?.differentialDiagnoses[diffDia]
-                                        .condition ??
-                                    "",
-                                code:
-                                    history
-                                        .sessions[index]
-                                        .diagnosis
-                                        ?.differentialDiagnoses[diffDia]
-                                        .icdCode ??
-                                    "",
+                                          0,
+                                (diffDia) => DiagnosisItem(
+                                  severity:
+                                      history
+                                          .sessions[index]
+                                          .diagnosis
+                                          ?.differentialDiagnoses[diffDia]
+                                          .likelihood ??
+                                      "",
+                                  name:
+                                      history
+                                          .sessions[index]
+                                          .diagnosis
+                                          ?.differentialDiagnoses[diffDia]
+                                          .condition ??
+                                      "",
+                                  code:
+                                      history
+                                          .sessions[index]
+                                          .diagnosis
+                                          ?.differentialDiagnoses[diffDia]
+                                          .icdCode ??
+                                      "",
+                                ),
                               ),
-                            ),
-                            workup:
-                                "Workup: ${history.sessions[index].diagnosis?.suggestedWorkup.take(2).join("\n") ?? ""} + ${history.sessions[index].diagnosis?.suggestedWorkup.length ?? 2 - 2} more",
+                              workup:
+                                  "Workup: ${history.sessions[index].diagnosis?.suggestedWorkup.take(2).join("\n") ?? ""} + ${history.sessions[index].diagnosis?.suggestedWorkup.length ?? 2 - 2} more",
 
-                            subjective: [
-                              SoapField(
-                                label: 'Chief complaint',
-                                value:
-                                    history.sessions[index].chiefComplaint ??
-                                    history
-                                        .sessions[index]
-                                        .summary
-                                        .subjective
-                                        .chiefComplaint,
-                              ),
-                              SoapField(
-                                label: 'HPI',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .historyOfPresentingIllness,
-                              ),
-                              SoapField(
-                                label: 'Past medical history',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .pastMedicalHistory,
-                              ),
-                              SoapField(
-                                label: 'Surgical history',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .surgicalHistory,
-                              ),
-                              SoapField(
-                                label: 'Medications',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .medications,
-                              ),
-                              SoapField(
-                                label: 'Allergies',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .allergies,
-                              ),
-                              SoapField(
-                                label: 'Family history',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .familyHistory,
-                              ),
-                              SoapField(
-                                label: 'Social history',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .socialHistory,
-                              ),
-                              SoapField(
-                                label: 'Review of systems',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .subjective
-                                    .reviewOfSystems,
-                              ),
-                            ],
-                            objective: [
-                              SoapField(
-                                label: 'Vital signs',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .objective
-                                    .vitalSigns,
-                              ),
-                              SoapField(
-                                label: 'Physical exam',
-                                value: history
-                                    .sessions[index]
-                                    .summary
-                                    .objective
-                                    .physicalExamination,
-                              ),
-                            ],
-                            show: history.sessions[index].diagnosis != null
-                                ? true
-                                : false,
-                          ),
+                              subjective: [
+                                SoapField(
+                                  label: 'Chief complaint',
+                                  value:
+                                      history.sessions[index].chiefComplaint ??
+                                      history
+                                          .sessions[index]
+                                          .summary
+                                          .subjective
+                                          .chiefComplaint,
+                                ),
+                                SoapField(
+                                  label: 'HPI',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .historyOfPresentingIllness,
+                                ),
+                                SoapField(
+                                  label: 'Past medical history',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .pastMedicalHistory,
+                                ),
+                                SoapField(
+                                  label: 'Surgical history',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .surgicalHistory,
+                                ),
+                                SoapField(
+                                  label: 'Medications',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .medications,
+                                ),
+                                SoapField(
+                                  label: 'Allergies',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .allergies,
+                                ),
+                                SoapField(
+                                  label: 'Family history',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .familyHistory,
+                                ),
+                                SoapField(
+                                  label: 'Social history',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .socialHistory,
+                                ),
+                                SoapField(
+                                  label: 'Review of systems',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .subjective
+                                      .reviewOfSystems,
+                                ),
+                              ],
+                              objective: [
+                                SoapField(
+                                  label: 'Vital signs',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .objective
+                                      .vitalSigns,
+                                ),
+                                SoapField(
+                                  label: 'Physical exam',
+                                  value: history
+                                      .sessions[index]
+                                      .summary
+                                      .objective
+                                      .physicalExamination,
+                                ),
+                              ],
+                              show: history.sessions[index].diagnosis != null
+                                  ? true
+                                  : false,
+                            ),
+                            SizedBox(height: 16), // Space between consultations
+                          ],
                         ),
                       ),
                     )

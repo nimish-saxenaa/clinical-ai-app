@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:clinical_ai_app/Models/complete_analysis_model.dart';
 import 'package:flutter/material.dart';
@@ -39,9 +38,9 @@ class _PipelineStep {
   _PipelineStep({
     required this.id,
     required this.title,
-    this.status = 'pending',
+    String? status,
     this.label,
-  });
+  }) : status = status ?? 'pending';
 }
 
 class _ConsultationPipelineScreenState extends State<ConsultationPipelineScreen>
@@ -109,7 +108,6 @@ class _ConsultationPipelineScreenState extends State<ConsultationPipelineScreen>
             response: response,
           ),
         ),
-
       );
     }
   }

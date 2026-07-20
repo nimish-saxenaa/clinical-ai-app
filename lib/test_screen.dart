@@ -1,13 +1,8 @@
-
 import 'package:clinical_ai_app/Models/consultation_models.dart';
 import 'package:clinical_ai_app/Services/Consultation/consultation_functions.dart';
 import 'package:clinical_ai_app/Services/Consultation/consultation_streaming.dart';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
-
-
-
-
 
 class TestScreen extends StatefulWidget {
   const TestScreen({
@@ -21,15 +16,20 @@ class TestScreen extends StatefulWidget {
   final String accessToken;
   final String question;
 
-
   @override
   State<TestScreen> createState() => _TestScreenState();
 }
 
 class _TestScreenState extends State<TestScreen> {
   AudioRecorder recorder = AudioRecorder();
+  // Using AAC-LC (best for iOS & Android streaming)
+  // Backend supports: audio/aac, audio/wav, audio/mp4
   final recordConfig = RecordConfig(
-    encoder: AudioEncoder.pcm16bits,
+    encoder: AudioEncoder.aacLc,
+    // Optional: customize if needed
+    // sampleRate: 16000,     // 16kHz for speech (lower bandwidth)
+    // bitRate: 128000,       // 128 kbps
+    // numChannels: 1,        // Mono
   );
   VoiceStreamConnection? connection;
   late String quest = widget.question;
@@ -48,9 +48,12 @@ class _TestScreenState extends State<TestScreen> {
                   sessionId: widget.sessionId,
                   accessToken: widget.accessToken,
                 );
-                connection?.start();
+
                 connection?.messages.listen((event) async {
                   if (event.type == "ready") {
+                    // Send start message with AAC MIME type
+                    connection?.start(mimeType: "audio/aac");
+
                     if (await recorder.hasPermission()) {
                       final stream = await recorder.startStream(recordConfig);
                       stream.listen((audioChunk) {
@@ -60,16 +63,13 @@ class _TestScreenState extends State<TestScreen> {
                       print("no permission");
                     }
                   }
-                  if(event.type == "done"){
+                  if (event.type == "done") {
                     await connection?.close();
                   }
-                  if(event.type == "token"){
+                  if (event.type == "token") {
                     quest += event.data["text"];
-                    setState(() {
-
-                    });
-                  }
-                  else{
+                    setState(() {});
+                  } else {
                     print(event.data);
                   }
                 });
@@ -85,13 +85,16 @@ class _TestScreenState extends State<TestScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                QaLogResponse res = await getQaLog(token: widget.accessToken, sessionId: widget.sessionId);
+                QaLogResponse res = await getQaLog(
+                  token: widget.accessToken,
+                  sessionId: widget.sessionId,
+                );
                 print(res.qaLog);
               },
               child: const Text("Stop"),
             ),
 
-            Text(ans??""),
+            Text(ans ?? ""),
           ],
         ),
       ),

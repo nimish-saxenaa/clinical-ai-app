@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// A single parsed Server-Sent-Event: `event: <name>` + `data: <json/text>`.
 String baseUrl = "https://med-history-agent.decrackle.io";
 String base = "med-history-agent.decrackle.io";
+
 class SseEvent {
   final String event;
   final dynamic data; // decoded JSON if possible, otherwise raw string
@@ -32,16 +33,14 @@ Stream<SseEvent> submitAnswerStream({
   final request = http.Request("POST", uri)
     ..headers["Content-Type"] = "application/json"
     ..headers["Authorization"] = "Bearer $token"
-    ..body = jsonEncode({
-      "answer": answer,
-    });
+    ..body = jsonEncode({"answer": answer});
 
   final response = await http.Client().send(request);
 
-  await for (final line in response.stream
-      .transform(utf8.decoder)
-      .transform(const LineSplitter())) {
-
+  await for (final line
+      in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
     // Ignore empty lines
     if (line.isEmpty) continue;
 
@@ -50,13 +49,9 @@ Stream<SseEvent> submitAnswerStream({
 
     final jsonString = line.substring(5).trim();
 
-    final Map<String, dynamic> json =
-    jsonDecode(jsonString);
+    final Map<String, dynamic> json = jsonDecode(jsonString);
 
-    yield SseEvent(
-      event: json["event"],
-      data: json,
-    );
+    yield SseEvent(event: json["event"], data: json);
   }
 }
 
@@ -78,9 +73,10 @@ Stream<SseEvent> consultationPipeline({
 
   final buffer = StringBuffer();
 
-  await for (final line in response.stream
-      .transform(utf8.decoder)
-      .transform(const LineSplitter())) {
+  await for (final line
+      in response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
     // Ignore keepalive comments
     if (line.startsWith(":")) continue;
 
@@ -97,10 +93,7 @@ Stream<SseEvent> consultationPipeline({
       try {
         final json = jsonDecode(raw) as Map<String, dynamic>;
 
-        yield SseEvent(
-          event: json["event"] as String,
-          data: json,
-        );
+        yield SseEvent(event: json["event"] as String, data: json);
       } catch (_) {
         // Ignore malformed events
       }
@@ -130,9 +123,15 @@ class VoiceStreamMessage {
 
 /// WS /api/v1/consultation/{session_id}/voice-stream?token=...
 /// Wraps the raw WebSocketChannel with helpers matching the documented protocol:
-///   1. call `start()` with the mime type first
-///   2. call `sendAudioChunk(bytes)` for each binary audio frame
-///   3. call `stop()` (or `close()`) when done
+///
+/// Backend Protocol (Client-Initiated):
+///   1. Connect to WebSocket
+///   2. Client sends: {"type": "start", "mime_type": "audio/aac"}
+///   3. Server responds: {"type": "ready"}
+///   4. Client streams binary audio chunks
+///   5. Client sends: {"type": "stop"}
+///   6. Server sends: transcript, streamed tokens, then done
+///
 /// Listen to `messages` for parsed server events.
 class VoiceStreamConnection {
   final WebSocketChannel _channel;
@@ -150,20 +149,36 @@ class VoiceStreamConnection {
     final uri = Uri.parse(
       "$scheme://$base/api/v1/consultation/$sessionId/voice-stream?token=$accessToken",
     );
+    print("🔌 [DEBUG WebSocket] Connecting to: $uri");
     final channel = WebSocketChannel.connect(uri);
+    print("✅ [DEBUG WebSocket] Channel created");
 
     final messages = channel.stream
         .where((event) => event is String) // JSON text frames only
-        .map((event) => VoiceStreamMessage.fromJson(
-              jsonDecode(event as String) as Map<String, dynamic>,
-            ));
+        .map((event) {
+          print("📨 [DEBUG WebSocket] Raw message received: $event");
+          return VoiceStreamMessage.fromJson(
+            jsonDecode(event as String) as Map<String, dynamic>,
+          );
+        });
 
     return VoiceStreamConnection._(channel, messages);
   }
 
-  /// Must be sent first, before any binary audio frames.
-  void start({String mimeType = "audio/webm;codecs=opus"}) {
-    _channel.sink.add(jsonEncode({"type": "start", "mime_type": mimeType}));
+  /// Send start message to initiate audio streaming.
+  /// Must be called FIRST after WebSocket connection, BEFORE any audio chunks.
+  /// Server will respond with {"type":"ready"} when it's ready to receive audio.
+  ///
+  /// Supported MIME types (backend):
+  /// - audio/aac (AAC-LC) - Recommended for iOS & Android
+  /// - audio/wav (PCM16) - Larger size, lossless
+  /// - audio/webm;codecs=opus - Not supported in Flutter streaming
+  /// - audio/ogg;codecs=opus - Not supported in Flutter streaming
+  /// - audio/mp4 - Possible with AAC encoder
+  void start({String mimeType = "audio/aac"}) {
+    final message = jsonEncode({"type": "start", "mime_type": mimeType});
+    print("📤 [DEBUG WebSocket] Sending start: $message");
+    _channel.sink.add(message);
   }
 
   /// Send a chunk of raw binary audio data.
@@ -173,8 +188,13 @@ class VoiceStreamConnection {
 
   /// Signals the server that audio is finished; alternatively just close().
   void stopRecording() {
-    _channel.sink.add(jsonEncode({"type": "stop"}));
+    final message = jsonEncode({"type": "stop"});
+    print("📤 [DEBUG WebSocket] Sending stop: $message");
+    _channel.sink.add(message);
   }
 
-  Future<void> close() => _channel.sink.close();
+  Future<void> close() {
+    print("🔌 [DEBUG WebSocket] Closing connection");
+    return _channel.sink.close();
+  }
 }
